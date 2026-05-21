@@ -4154,7 +4154,7 @@ async function refreshHotspotsForSelectedRegion() {
           card.recentSpeciesCount = new Set(
             observations.map((obs) => obs.speciesCode || obs.comName).filter(Boolean),
           ).size;
-          card.recentMigrants = extractLocalMigrants(observations, []).map((species) => species.name).slice(0, 8);
+          card.recentMigrants = extractMigrantSignals(observations, []).map((species) => species.name).slice(0, 8);
           card.species = card.recentMigrants.slice(0, 4);
           card.observationWindowLabel = label;
           return card;
