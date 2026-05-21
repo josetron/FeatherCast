@@ -2392,6 +2392,33 @@ function hotspotBaseFromName(name, index) {
   return clamp(base, 54, 90);
 }
 
+const hotspotMoreInfoRules = [
+  {
+    pattern: /blue hole regional park/i,
+    url: "https://www.cityofwimberley.com/Facilities/Facility/Details/Blue-Hole-Regional-Park-2",
+  },
+  {
+    pattern: /charro ranch park/i,
+    url: "https://www.destinationdrippingsprings.com/location/charro-ranch-park-",
+  },
+  {
+    pattern: /jacob'?s well/i,
+    url: "https://www.hayscountytx.gov/learn-more-about-the-park",
+  },
+  {
+    pattern: /five mile dam/i,
+    url: "https://www.sanmarcostx.gov/Facilities/Facility/Details/Five-Mile-Dam-Park-72",
+  },
+  {
+    pattern: /pedernales falls/i,
+    url: "https://tpwd.texas.gov/state-parks/pedernales-falls",
+  },
+];
+
+function hotspotMoreInfoUrl(name) {
+  return hotspotMoreInfoRules.find((rule) => rule.pattern.test(String(name || "")))?.url || "";
+}
+
 function ebirdHotspotToCard(hotspot, index, regionName) {
   const name = hotspot.locName || hotspot.name || "eBird hotspot";
   const coordinates =
@@ -2412,6 +2439,7 @@ function ebirdHotspotToCard(hotspot, index, regionName) {
     species: [],
     url: hotspot.locId ? `https://ebird.org/hotspot/${hotspot.locId}` : "",
     mapsUrl,
+    moreInfoUrl: hotspotMoreInfoUrl(name),
     locId: hotspot.locId || "",
     recentSpeciesCount: null,
     recentMigrants: [],
@@ -3378,6 +3406,7 @@ async function renderHotspots(result) {
             <p class="hotspot-links">
               ${hotspot.mapsUrl ? `<a class="maps-link" href="${hotspot.mapsUrl}" target="_blank" rel="noreferrer">Google Maps</a>` : ""}
               ${hotspot.url ? `<a class="hotspot-direct-link" href="${hotspot.url}" target="_blank" rel="noreferrer">eBird Hotspot</a>` : ""}
+              ${hotspot.moreInfoUrl ? `<a class="hotspot-more-info-link" href="${hotspot.moreInfoUrl}" target="_blank" rel="noreferrer">More info...</a>` : ""}
               ${!hotspot.mapsUrl && !hotspot.url ? hotspot.signal : ""}
             </p>
             ${

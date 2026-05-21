@@ -1668,6 +1668,11 @@ a:focus-visible {
   font-weight: 900;
 }
 
+.hotspot-more-info-link {
+  color: #8b5e34;
+  font-weight: 900;
+}
+
 .hotspot-area,
 .habitat,
 .hotspot-recent,
