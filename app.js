@@ -275,9 +275,56 @@ const countries = [
     ebirdCode: "CR",
     isCountry: true,
   },
+  {
+    name: "Colombia",
+    abbr: "COL",
+    ebirdCode: "CO",
+    isCountry: true,
+  },
+  {
+    name: "Panama",
+    abbr: "PAN",
+    ebirdCode: "PA",
+    isCountry: true,
+  },
 ];
 
 const countryRegions = {
+  COL: [
+    { name: "Amazonas", ebirdCode: "CO-AMA" },
+    { name: "Antioquia", ebirdCode: "CO-ANT" },
+    { name: "Arauca", ebirdCode: "CO-ARA" },
+    { name: "Atlantico", ebirdCode: "CO-ATL" },
+    { name: "Bolivar", ebirdCode: "CO-BOL" },
+    { name: "Boyaca", ebirdCode: "CO-BOY" },
+    { name: "Caldas", ebirdCode: "CO-CAL" },
+    { name: "Caqueta", ebirdCode: "CO-CAQ" },
+    { name: "Casanare", ebirdCode: "CO-CAS" },
+    { name: "Cauca", ebirdCode: "CO-CAU" },
+    { name: "Cesar", ebirdCode: "CO-CES" },
+    { name: "Choco", ebirdCode: "CO-CHO" },
+    { name: "Cordoba", ebirdCode: "CO-COR" },
+    { name: "Cundinamarca", ebirdCode: "CO-CUN" },
+    { name: "Distrito Capital de Bogota", ebirdCode: "CO-DC" },
+    { name: "Guainia", ebirdCode: "CO-GUA" },
+    { name: "Guaviare", ebirdCode: "CO-GUV" },
+    { name: "Huila", ebirdCode: "CO-HUI" },
+    { name: "La Guajira", ebirdCode: "CO-LAG" },
+    { name: "Magdalena", ebirdCode: "CO-MAG" },
+    { name: "Meta", ebirdCode: "CO-MET" },
+    { name: "Narino", ebirdCode: "CO-NAR" },
+    { name: "Norte de Santander", ebirdCode: "CO-NSA" },
+    { name: "Putumayo", ebirdCode: "CO-PUT" },
+    { name: "Quindio", ebirdCode: "CO-QUI" },
+    { name: "Risaralda", ebirdCode: "CO-RIS" },
+    { name: "San Andres, Providencia and Santa Catalina", ebirdCode: "CO-SAP" },
+    { name: "Santander", ebirdCode: "CO-SAN" },
+    { name: "Sucre", ebirdCode: "CO-SUC" },
+    { name: "Tolima", ebirdCode: "CO-TOL" },
+    { name: "Valle del Cauca", ebirdCode: "CO-VAC" },
+    { name: "Vaupes", ebirdCode: "CO-VAU" },
+    { name: "Vichada", ebirdCode: "CO-VID" },
+  ],
   CR: [
     { name: "Alajuela", ebirdCode: "CR-A" },
     { name: "Cartago", ebirdCode: "CR-C" },
@@ -286,6 +333,22 @@ const countryRegions = {
     { name: "Limón", ebirdCode: "CR-L" },
     { name: "Puntarenas", ebirdCode: "CR-P" },
     { name: "San José", ebirdCode: "CR-SJ" },
+  ],
+  PAN: [
+    { name: "Bocas del Toro", ebirdCode: "PA-1" },
+    { name: "Cocle", ebirdCode: "PA-2" },
+    { name: "Colon", ebirdCode: "PA-3" },
+    { name: "Chiriqui", ebirdCode: "PA-4" },
+    { name: "Darien", ebirdCode: "PA-5" },
+    { name: "Herrera", ebirdCode: "PA-6" },
+    { name: "Los Santos", ebirdCode: "PA-7" },
+    { name: "Panama", ebirdCode: "PA-8" },
+    { name: "Veraguas", ebirdCode: "PA-9" },
+    { name: "Panama Oeste", ebirdCode: "PA-10" },
+    { name: "Embera", ebirdCode: "PA-EM" },
+    { name: "Guna Yala", ebirdCode: "PA-KY" },
+    { name: "Naso Tjer Di", ebirdCode: "PA-NT" },
+    { name: "Ngabe-Bugle", ebirdCode: "PA-NB" },
   ],
 };
 
@@ -3362,7 +3425,7 @@ async function renderHotspots(result) {
       : region.hotspots;
   const filteredHotspots =
     hasActiveHotspotData && activeHotspotFilterComplete
-      ? hotspotSource.filter((hotspot) => hotspot.recentMigrants?.length)
+      ? hotspotSource.filter((hotspot) => hotspot.species?.length || hotspot.recentSpeciesCount)
       : hotspotSource;
 
   if (hasActiveHotspotData && activeHotspotFilterComplete && !filteredHotspots.length) {
@@ -3371,7 +3434,7 @@ async function renderHotspots(result) {
         <div class="rank">0</div>
         <div>
           <div class="hotspot-title">
-            <h3>No migrant-active hotspots found</h3>
+            <h3>No recently active eBird locations found</h3>
             <span>0</span>
           </div>
           <p class="hotspot-area">${regionName}</p>
@@ -3381,7 +3444,7 @@ async function renderHotspots(result) {
       </article>
     `;
     document.querySelector("#hotspotIntro").textContent =
-      `Filtered ${regionName} hotspots to places with migrant signal species reported in the selected eBird window.`;
+      `Filtered ${regionName} locations to places with recent eBird activity in the selected window.`;
     return;
   }
 
@@ -3416,10 +3479,10 @@ async function renderHotspots(result) {
             }
             ${
               hotspot.recentMigrants?.length
-                ? `<p class="hotspot-migrants">Migrants reported: ${hotspot.recentMigrants.join(", ")}</p>`
+                ? `<p class="hotspot-migrants">${hotspot.signalLabel || "Signals reported"}: ${hotspot.recentMigrants.join(", ")}</p>`
                 : hotspot.recentSpeciesCount === null || hotspot.recentSpeciesCount === undefined
-                  ? `<p class="hotspot-migrants">Migrants reported: checking recent reports</p>`
-                  : `<p class="hotspot-migrants">Migrants reported: none detected in recent hotspot pull</p>`
+                  ? `<p class="hotspot-migrants">Signals reported: checking recent reports</p>`
+                  : `<p class="hotspot-migrants">Signals reported: none detected in recent hotspot pull</p>`
             }
             <p class="habitat">${hotspot.habitat}</p>
             ${
@@ -3438,7 +3501,7 @@ async function renderHotspots(result) {
   document.querySelector("#hotspotIntro").textContent =
     hasActiveHotspotData
       ? activeHotspotFilterComplete
-        ? `Showing ${filteredHotspots.length} ${regionName} hotspots with migrant signal species reported in ${filteredHotspots[0]?.observationWindowLabel?.toLowerCase() || "the latest eBird pull"}.`
+        ? `Showing ${filteredHotspots.length} ${regionName} eBird locations with recent species reported in ${filteredHotspots[0]?.observationWindowLabel?.toLowerCase() || "the latest eBird pull"}.`
         : `Loaded ${activeRegionHotspots.length} county-specific eBird hotspots for ${regionName}; checking recent migrant reports.`
       : `${activeHotspotStatus} Ranked for ${regionName} using water, riparian cover, migrant habitat, and current sample signals.`;
 }
@@ -3690,7 +3753,7 @@ function renderCountryRegionOptions(country) {
     <option value="manual" data-name="Manual Region">Manual region</option>
   `;
   fields.regionSelect.value = regions[0]?.ebirdCode || country.ebirdCode;
-  setCountyStatus(`Country selected: showing ${country.name} provinces.`);
+  setCountyStatus(`Country selected: showing ${country.name} regions.`);
 }
 
 async function fetchCountyObservationCount(county) {
@@ -4171,28 +4234,42 @@ async function refreshHotspotsForSelectedRegion() {
       const observationsByHotspot = new Map();
 
       observations.forEach((obs) => {
-        if (!obs.locId || !hotspotById.has(obs.locId)) return;
+        if (!obs.locId) return;
         if (!observationsByHotspot.has(obs.locId)) observationsByHotspot.set(obs.locId, []);
         observationsByHotspot.get(obs.locId).push(obs);
       });
 
       return [...observationsByHotspot.entries()]
         .map(([locId, observations], index) => {
-          const hotspot = hotspotById.get(locId);
+          const fallbackObservation = observations[0] || {};
+          const hotspot = hotspotById.get(locId) || {
+            locId,
+            locName: fallbackObservation.locName || "eBird location",
+            lat: fallbackObservation.lat,
+            lng: fallbackObservation.lng,
+          };
           const card = ebirdHotspotToCard(hotspot, index, regionName);
           card.recentSpeciesCount = new Set(
             observations.map((obs) => obs.speciesCode || obs.comName).filter(Boolean),
           ).size;
-          card.recentMigrants = extractMigrantSignals(observations, []).map((species) => species.name).slice(0, 8);
+          const migrantSignals = extractMigrantSignals(observations, []);
+          const localSignals = migrantSignals.length
+            ? migrantSignals
+            : extractNonMigrantSignals(observations, []);
+          const reportedSignals = localSignals.length
+            ? localSignals
+            : extractReportedSpeciesSignals(observations);
+          card.signalLabel = migrantSignals.length ? "Migrants reported" : "Species reported";
+          card.recentMigrants = reportedSignals.map((species) => species.name).slice(0, 8);
           card.species = card.recentMigrants.slice(0, 4);
           card.observationWindowLabel = label;
           return card;
         })
-        .filter((card) => card.recentMigrants.length)
+        .filter((card) => card.species.length || card.recentSpeciesCount > 0)
         .sort(
           (a, b) =>
-            b.recentMigrants.length - a.recentMigrants.length ||
-            b.recentSpeciesCount - a.recentSpeciesCount,
+            b.recentSpeciesCount - a.recentSpeciesCount ||
+            b.recentMigrants.length - a.recentMigrants.length,
         )
         .slice(0, 12);
     };
@@ -4208,7 +4285,7 @@ async function refreshHotspotsForSelectedRegion() {
         observations: recentObservations,
         label: "Previous 7 days",
         emptyMessage:
-          "No migrant-active eBird hotspots were reported today, so hotspots are using the previous seven days.",
+          "No recently active eBird locations were reported today, so hotspots are using the previous seven days.",
         statusDetail: "the previous 7 days",
       };
       cards = buildHotspotCards(recentObservations, selectedHotspotWindow.label);
@@ -4219,8 +4296,8 @@ async function refreshHotspotsForSelectedRegion() {
     activeRegionHotspots = cards;
     activeHotspotFilterComplete = true;
     activeHotspotStatus = cards.length
-      ? `${selectedHotspotWindow.emptyMessage ? `${selectedHotspotWindow.emptyMessage} ` : ""}Loaded migrant-active eBird hotspots for ${regionName} from ${selectedHotspotWindow.statusDetail}.`
-      : `${selectedHotspotWindow.emptyMessage ? `${selectedHotspotWindow.emptyMessage} ` : ""}No eBird hotspots had migrant signal species reported in ${regionName} in ${selectedHotspotWindow.statusDetail}.`;
+      ? `${selectedHotspotWindow.emptyMessage ? `${selectedHotspotWindow.emptyMessage} ` : ""}Loaded recently active eBird locations for ${regionName} from ${selectedHotspotWindow.statusDetail}.`
+      : `${selectedHotspotWindow.emptyMessage ? `${selectedHotspotWindow.emptyMessage} ` : ""}No eBird locations had recent species reported in ${regionName} in ${selectedHotspotWindow.statusDetail}.`;
   } catch (error) {
     activeHotspotRegionCode = "";
     activeRegionHotspots = [];
@@ -4330,6 +4407,10 @@ function extractNonMigrantSignals(recent, notable) {
   return countSignalSpecies(recent, (obs) =>
     classifySpeciesObservation(obs, notableSpeciesKeys) === "nonMigrantSignals",
   );
+}
+
+function extractReportedSpeciesSignals(observations) {
+  return countSignalSpecies(observations, () => true);
 }
 
 async function renderSignalSpeciesList(list, signalSpecies) {
