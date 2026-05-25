@@ -624,6 +624,26 @@ main {
   padding-block: 10px;
 }
 
+.front-map-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-self: start;
+  margin-top: -2px;
+}
+
+.front-map-link {
+  justify-self: start;
+  color: #2c7188;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.front-map-link:hover {
+  text-decoration: underline;
+}
+
 .bird-finder-card p a {
   color: var(--lagoon);
   font-weight: 800;

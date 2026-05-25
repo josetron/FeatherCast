@@ -2093,6 +2093,7 @@ const windMap = document.querySelector("#windMap");
 const windMapStatus = document.querySelector("#windMapStatus");
 const frontLine = document.querySelector("#frontLine");
 const hotspotCache = new Map();
+const hotspotMoreInfoCache = new Map();
 const regionPhotoCache = new Map();
 const speciesPhotoCache = new Map();
 const speciesStatusCache = new Map();
@@ -2165,6 +2166,8 @@ const rainDisplay = document.querySelector("#rainDisplay");
 const frontStatusDisplay = document.querySelector("#frontStatusDisplay");
 const frontPassageDisplay = document.querySelector("#frontPassageDisplay");
 const ebirdSignalDisplay = document.querySelector("#ebirdSignalDisplay");
+const frontMapLink = document.querySelector("#frontMapLink");
+const frontMapLinks = document.querySelector("#frontMapLinks");
 const windAutoFillHint = document.querySelector("#windAutoFillHint");
 const rainAutoFillHint = document.querySelector("#rainAutoFillHint");
 const frontStatusAutoFillHint = document.querySelector("#frontStatusAutoFillHint");
@@ -2275,6 +2278,7 @@ function syncSignalDisplays() {
   if (windDirectionDisplay) windDirectionDisplay.textContent = fields.windDirection.selectedOptions[0]?.textContent || "";
   if (rainDisplay) rainDisplay.textContent = fields.rain.selectedOptions[0]?.textContent || "";
   if (frontStatusDisplay) frontStatusDisplay.textContent = fields.frontStatus.selectedOptions[0]?.textContent || "No front nearby";
+  if (frontMapLinks) frontMapLinks.classList.toggle("is-hidden", fields.frontStatus.value === "none");
   if (frontPassageDisplay) {
     const manualFrontPassage = fields.frontPassage.value.trim();
     const impliedFrontPassage = {
@@ -2622,11 +2626,19 @@ const hotspotMoreInfoRules = [
   },
   {
     pattern: /charro ranch park/i,
-    url: "https://www.destinationdrippingsprings.com/location/charro-ranch-park-",
+    url: "https://mccmeetingspublic.blob.core.usgovcloudapi.net/drippingtx-meet-0e94a29bed08472294cf009d544db997/ITEM-Attachment-001-dda31f3431224e1eb95d4537dffe890c.pdf",
+  },
+  {
+    pattern: /dripping springs ranch park/i,
+    url: "https://www.drippingspringstx.gov/about-our-parks/files/dsrp-trail-map-0",
   },
   {
     pattern: /jacob'?s well/i,
     url: "https://www.hayscountytx.gov/learn-more-about-the-park",
+  },
+  {
+    pattern: /texas state|tx state|theatre center ponds|theater center ponds/i,
+    url: "https://docs.gato.txst.edu/213138/Map-Directions-to-Welcome-Center.pdf",
   },
   {
     pattern: /five mile dam/i,
@@ -2636,10 +2648,349 @@ const hotspotMoreInfoRules = [
     pattern: /pedernales falls/i,
     url: "https://tpwd.texas.gov/state-parks/pedernales-falls",
   },
+  {
+    pattern: /cullinan park/i,
+    url: "https://cullinanparkconservancy.org/uploads/Cullinan_Park_Trail_Map_-_March_2024_2_.pdf",
+  },
+  {
+    pattern: /sugar land|brazos river park|memorial park|oyster creek park/i,
+    url: "https://www.sugarlandtx.gov/DocumentCenter/View/25157/Sugar-Land-Trail-Map-2021",
+  },
+  {
+    pattern: /brazos bend/i,
+    url: "https://tpwd.texas.gov/publications/pwdpubs/media/park_maps/pwd_mp_p4504_110w.pdf",
+  },
+  {
+    pattern: /willow fork|exploration park|cinco ranch|central green|cross creek ranch/i,
+    url: "https://www.willowforkdrainagedistrict.com/wp-content/uploads/2019/01/2019-01-03_WFDD_MasterPlan-compressed.pdf",
+  },
+  {
+    pattern: /holey land/i,
+    url: "https://myfwc.com/recreation/lead/holey-land/",
+  },
+  {
+    pattern: /brian piccolo/i,
+    url: "https://www.broward.org/Parks/Pages/Park.aspx?p=4",
+  },
+  {
+    pattern: /plantation preserve/i,
+    url: "https://www.plantation.org/government/departments/parks-recreation/plantation-preserve-golf-course-club/golf-course/course-layout",
+  },
+  {
+    pattern: /west lake park|west lake preserve/i,
+    url: "https://www.broward.org/Parks/Pages/Park.aspx?p=42",
+  },
+  {
+    pattern: /wca 2-?b|water conservation area 2/i,
+    url: "https://www.sfwmd.gov/recreation-site/water-conservation-area-2",
+  },
+  {
+    pattern: /everglades holiday park/i,
+    url: "https://www.evergladesholidaypark.com/about/map/",
+  },
+  {
+    pattern: /mizell|eula johnson|john u\.? lloyd/i,
+    url: "https://floridadep.gov/sites/default/files/Dr.%20Von%20D.%20Mizell-Eula%20Johnson%20Reference%20Map.pdf",
+  },
+  {
+    pattern: /celery fields/i,
+    url: "https://sarasotaaudubon.org/wp-content/uploads/2019/10/Celery_Fields_Map_Brochure.pdf",
+  },
+  {
+    pattern: /myakka river|birdwalk|boat ramp|main bridge|deep hole/i,
+    url: "https://www.floridastateparks.org/sites/default/files/media/file/Myakka_River_Map-brochure.pdf",
+  },
+  {
+    pattern: /oscar scherer/i,
+    url: "https://www.floridastateparks.org/sites/default/files/media/file/Oscar_Scherer_Map-brochure_0.pdf",
+  },
+  {
+    pattern: /nathan benderson/i,
+    url: "https://nathanbendersonpark.org/wp-content/uploads/2023/03/CC-MTG-VENUE-MAP-Youth-Nationals-MAP-6-3-24.pdf",
+  },
+  {
+    pattern: /carlton reserve|big slough/i,
+    url: "https://www.carltonreserve.org/app/download/12053369377/Big+Slough.pdf",
+  },
+  {
+    pattern: /shamrock park/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46884/",
+  },
+  {
+    pattern: /red bug slough/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46850/",
+  },
+  {
+    pattern: /deer prairie creek/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46828/",
+  },
+  {
+    pattern: /lemon bay park/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46842/",
+  },
+  {
+    pattern: /rothenbach park/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46846/",
+  },
+  {
+    pattern: /jelks preserve/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46840/",
+  },
+  {
+    pattern: /curry creek preserve/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46824/",
+  },
+  {
+    pattern: /scherer thaxton/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46854/",
+  },
+  {
+    pattern: /manasota scrub/i,
+    url: "https://www.scgov.net/home/showpublisheddocument/46843/",
+  },
+  {
+    pattern: /myakka sf|myakka state forest/i,
+    url: "https://www.fdacs.gov/content/download/4636/file/Myakka_SF_map.pdf",
+  },
+  {
+    pattern: /crowley museum|crowley nature/i,
+    url: "https://crowleyfl.org/wp-content/uploads/2021/04/Crowley-Trail-Map.pdf",
+  },
+  {
+    pattern: /myakkahatchee creek/i,
+    url: "https://www.northportfl.gov/files/assets/city/v/1/parks-amp-rec/documents/myakkahatchee-creek-trail-map.pdf",
+  },
+  {
+    pattern: /marie selby|selby botanical|downtown sarasota campus/i,
+    url: "https://selby.org/wp-content/uploads/2024/01/Selby-Gardens-Downtown-Sarasota-Campus-Map-2024.pdf",
+  },
+  {
+    pattern: /historic spanish point/i,
+    url: "https://selby.org/wp-content/uploads/2023/11/Selby-Gardens-Historic-Spanish-Point-Campus-Map.pdf",
+  },
+  {
+    pattern: /bobby jones/i,
+    url: "https://www.sarasotafl.gov/home/showpublisheddocument/12668/",
+  },
+  {
+    pattern: /arlington park/i,
+    url: "https://www.sarasotafl.gov/home/showpublisheddocument/3456/",
+  },
+  {
+    pattern: /ken thompson|city island park/i,
+    url: "https://www.sarasotafl.gov/home/showpublisheddocument/3454/",
+  },
+  {
+    pattern: /payne park/i,
+    url: "https://www.sarasotafl.gov/home/showpublisheddocument/3458/",
+  },
+  {
+    pattern: /pinebrook park/i,
+    url: "https://www.venicegov.com/home/showpublisheddocument/4134/",
+  },
+  {
+    pattern: /legacy trail|culverhouse|palmer lake/i,
+    url: "https://www.sarasotalegacytrail.com/CountyTrailMap.pdf",
+  },
+  {
+    pattern: /sweetwater wetlands/i,
+    url: "https://www.tucsonaz.gov/Departments/Water/Community-Relations/Sweetwater-Wetlands/About-Sweetwater-Wetlands-and-Access",
+  },
+  {
+    pattern: /canoa ranch|historic canoa ranch/i,
+    url: "https://www.pima.gov/1253/Historic-Canoa-Ranch",
+  },
+  {
+    pattern: /el rio preserve/i,
+    url: "https://www.maranaaz.gov/Departments/Parks-Recreation/El-Rio-Preserve",
+  },
+  {
+    pattern: /buenos aires|arivaca cienega/i,
+    url: "https://www.fws.gov/refuge/buenos-aires/map",
+  },
+  {
+    pattern: /agua caliente/i,
+    url: "https://content.civicplus.com/api/assets/1ed6da22-580a-4832-9981-8a2b934221fe",
+  },
+  {
+    pattern: /kennedy park|john f\.? kennedy park/i,
+    url: "https://www.tucsonaz.gov/Departments/Parks-and-Recreation/Parks/John-F.-Kennedy-Park",
+  },
+  {
+    pattern: /kino environmental|kerp|kino sports/i,
+    url: "https://kinobaseball.com/wp-content/uploads/MAP-Kino-Sports-Complex.pdf",
+  },
+  {
+    pattern: /madera canyon|proctor rd|proctor road/i,
+    url: "https://www.nature.org/content/dam/tnc/nature/en/documents/madera-canyon-trail-map.pdf",
+  },
+  {
+    pattern: /cienega creek|catalina regional|canoa hills/i,
+    url: "https://www.pima.gov/3261/Conservation-Lands-and-Resources-Map-Roo",
+  },
+  {
+    pattern: /danny lopez|columbus park|christopher columbus park/i,
+    url: "https://www.tucsonaz.gov/Departments/Parks-and-Recreation/Parks/Christopher-Columbus-Park",
+  },
+  {
+    pattern: /sabino canyon/i,
+    url: "https://www.fs.usda.gov/Internet/FSE_DOCUMENTS/fseprd525865.pdf",
+  },
+  {
+    pattern: /fort lowell/i,
+    url: "https://www.tucsonaz.gov/Departments/Parks-and-Recreation/Parks/Fort-Lowell-Park",
+  },
+  {
+    pattern: /bog springs|carrie nation|josephine saddle|kent springs|mt\.? wrightson|mount wrightson|old baldy|madera canyon.*nature trail/i,
+    url: "https://www.nature.org/content/dam/tnc/nature/en/documents/madera-canyon-trail-map.pdf",
+  },
+  {
+    pattern: /patagonia lake|sonoita creek state natural/i,
+    url: "https://azstateparks.com/patagonia-lake/explore/map",
+  },
+  {
+    pattern: /patagonia-?sonoita creek preserve|sonoita creek preserve/i,
+    url: "https://www.nature.org/content/dam/tnc/nature/en/documents/arizona/Patagonia-Sonoita-Creek-Preserve-Trail-Map.pdf",
+  },
+  {
+    pattern: /juan bautista de anza|anza trail|amado|carmen|rio rico|tubac trailhead/i,
+    url: "https://www.nps.gov/juba/planyourvisit/maps.htm",
+  },
+  {
+    pattern: /las cienegas/i,
+    url: "https://www.blm.gov/sites/blm.gov/files/documents/files/media-center-public-room-arizona-las-cienegas-map.pdf",
+  },
+  {
+    pattern: /tumacacori/i,
+    url: "https://www.nps.gov/carto/hfc/carto/media/TUMAmap1.pdf",
+  },
+  {
+    pattern: /tubac presidio/i,
+    url: "https://azstateparks.com/tubac/explore/map",
+  },
+  {
+    pattern: /pena blanca|peña blanca/i,
+    url: "https://www.fs.usda.gov/recarea/coronado/recarea/?recid=25446",
+  },
+  {
+    pattern: /brazoria national wildlife|brazoria nwr|big slough|cannan bend/i,
+    url: "https://www.fws.gov/refuge/brazoria/map",
+  },
+  {
+    pattern: /san bernard.*auto tour|bobcat woods|moccasin pond|scissor-?tailed trail/i,
+    url: "https://www.fws.gov/sites/default/files/documents/san%20bernard%20auto%20tour%20map%20fact%20sheet%20final.pdf",
+  },
+  {
+    pattern: /dow woods|hudson woods|san bernard national wildlife|san bernard nwr/i,
+    url: "https://www.fws.gov/apps/refuge/san-bernard/visit-us",
+  },
+  {
+    pattern: /gulf coast bird observatory|gcbo/i,
+    url: "https://www.gcbo.org/wp-content/uploads/2015/10/GCBOTrailMap.pdf",
+  },
+  {
+    pattern: /justin hurst/i,
+    url: "https://tpwd.texas.gov/huntwild/hunt/public/annual_public_hunting/resources/JustinHurst_721.pdf",
+  },
+  {
+    pattern: /sea center texas/i,
+    url: "https://tpwd.texas.gov/publications/spdest/destinations/sea_center/",
+  },
+  {
+    pattern: /camp mohawk/i,
+    url: "https://www.brazoriacountytx.gov/departments/parks-department/camp-mohawk",
+  },
+  {
+    pattern: /delores fenwick|shadow creek ranch|independence park|centennial park|pearland.*trail|pearland.*park/i,
+    url: "https://maps.pearlandtx.gov/datasets/trails",
+  },
 ];
 
 function hotspotMoreInfoUrl(name) {
   return hotspotMoreInfoRules.find((rule) => rule.pattern.test(String(name || "")))?.url || "";
+}
+
+function hotspotMoreInfoKey(name, regionName) {
+  return `${String(name || "").toLowerCase()}|${String(regionName || "").toLowerCase()}`;
+}
+
+function normalizeSearchResultUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes("duckduckgo.com") && parsed.searchParams.has("uddg")) {
+      return parsed.searchParams.get("uddg") || "";
+    }
+    return parsed.href;
+  } catch {
+    return "";
+  }
+}
+
+function isCredibleHotspotInfoUrl(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const host = parsed.hostname.toLowerCase();
+  const path = parsed.pathname.toLowerCase();
+  if (/(facebook|instagram|tripadvisor|yelp|twitter|x\.com|youtube|ebird|google|bing|duckduckgo|alltrails)\./.test(host)) return false;
+  if (/\.(jpg|jpeg|png|gif|webp)$/i.test(path)) return false;
+  return /(\.gov$|\.edu$|\.org$|city|county|parks?|tpwd|state|txst|visitor|tourism|wimberley|drippingsprings|sanmarcos)/i.test(host + path);
+}
+
+async function searchHotspotMoreInfoUrl(name, regionName) {
+  const curatedUrl = hotspotMoreInfoUrl(name);
+  if (curatedUrl) return curatedUrl;
+
+  const cacheKey = hotspotMoreInfoKey(name, regionName);
+  if (hotspotMoreInfoCache.has(cacheKey)) return hotspotMoreInfoCache.get(cacheKey);
+
+  const queries = [
+    `"${name}" "${regionName}" map`,
+    `"${name}" "${regionName}" official`,
+    `"${name}" "${regionName}" park`,
+  ];
+
+  for (const query of queries) {
+    try {
+      const response = await fetch(`https://r.jina.ai/http://duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
+      if (!response.ok) continue;
+      const text = await response.text();
+      const links = [...text.matchAll(/https?:\/\/[^\s)"'<>\]]+/g)]
+        .map((match) => normalizeSearchResultUrl(match[0]))
+        .filter(Boolean);
+      const found = links.find(isCredibleHotspotInfoUrl);
+      if (found) {
+        hotspotMoreInfoCache.set(cacheKey, found);
+        return found;
+      }
+    } catch {
+      // Keep rendering fast; missing More info links simply stay hidden.
+    }
+  }
+
+  hotspotMoreInfoCache.set(cacheKey, "");
+  return "";
+}
+
+async function enrichHotspotMoreInfoLinks(hotspots, regionName, renderRegionCode) {
+  const missingHotspots = hotspots.filter((hotspot) => !hotspot.moreInfoUrl).slice(0, 8);
+  await Promise.all(
+    missingHotspots.map(async (hotspot) => {
+      const url = await searchHotspotMoreInfoUrl(hotspot.name, regionName);
+      if (!url || getRegion().ebirdCode !== renderRegionCode) return;
+      hotspot.moreInfoUrl = url;
+      const card = document.querySelector(`[data-hotspot-key="${hotspot.renderKey}"]`);
+      const links = card?.querySelector(".hotspot-links");
+      if (!links || links.querySelector(".hotspot-more-info-link")) return;
+      links.insertAdjacentHTML(
+        "beforeend",
+        `<a class="hotspot-more-info-link" href="${url}" target="_blank" rel="noreferrer">More info...</a>`,
+      );
+    }),
+  );
 }
 
 function ebirdHotspotToCard(hotspot, index, regionName) {
@@ -3615,18 +3966,20 @@ async function renderHotspots(result) {
     return;
   }
 
-  const cards = filteredHotspots
+  const scoredHotspots = filteredHotspots
     .map((hotspot, index) => ({
       ...hotspot,
+      renderKey: `hotspot-${index}-${String(hotspot.locId || hotspot.name || "location").replace(/[^a-z0-9]+/gi, "-")}`,
       score: hotspotScore(hotspot.base, result.score, index),
     }))
-    .sort((a, b) => b.score - a.score)
-    .map(async (hotspot, index) => {
+    .sort((a, b) => b.score - a.score);
+
+  const cards = scoredHotspots.map(async (hotspot, index) => {
       const speciesRows = hotspot.species?.length
         ? await Promise.all(hotspot.species.map((species) => localSpeciesPhotoRow(species)))
         : [];
       return `
-        <article class="hotspot-card">
+        <article class="hotspot-card" data-hotspot-key="${hotspot.renderKey}">
           <div class="rank">${index + 1}</div>
           <div>
             <div class="hotspot-title">
@@ -3671,6 +4024,7 @@ async function renderHotspots(result) {
         ? `Showing ${filteredHotspots.length} ${regionName} eBird locations with recent species reported in ${filteredHotspots[0]?.observationWindowLabel?.toLowerCase() || "the latest eBird pull"}.`
         : `Loaded ${activeRegionHotspots.length} county-specific eBird hotspots for ${regionName}; checking recent migrant reports.`
       : `${activeHotspotStatus} Ranked for ${regionName} using water, riparian cover, migrant habitat, and current sample signals.`;
+  enrichHotspotMoreInfoLinks(scoredHotspots, regionName, renderRegionCode);
 }
 
 function renderRegion() {
