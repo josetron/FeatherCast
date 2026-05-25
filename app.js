@@ -270,6 +270,12 @@ const states = [
 
 const countries = [
   {
+    name: "Canada",
+    abbr: "CAN",
+    ebirdCode: "CA",
+    isCountry: true,
+  },
+  {
     name: "Costa Rica",
     abbr: "CR",
     ebirdCode: "CR",
@@ -290,6 +296,21 @@ const countries = [
 ];
 
 const countryRegions = {
+  CAN: [
+    { name: "Alberta", ebirdCode: "CA-AB" },
+    { name: "British Columbia", ebirdCode: "CA-BC" },
+    { name: "Manitoba", ebirdCode: "CA-MB" },
+    { name: "New Brunswick", ebirdCode: "CA-NB" },
+    { name: "Newfoundland and Labrador", ebirdCode: "CA-NL" },
+    { name: "Northwest Territories", ebirdCode: "CA-NT" },
+    { name: "Nova Scotia", ebirdCode: "CA-NS" },
+    { name: "Nunavut", ebirdCode: "CA-NU" },
+    { name: "Ontario", ebirdCode: "CA-ON" },
+    { name: "Prince Edward Island", ebirdCode: "CA-PE" },
+    { name: "Quebec", ebirdCode: "CA-QC" },
+    { name: "Saskatchewan", ebirdCode: "CA-SK" },
+    { name: "Yukon", ebirdCode: "CA-YT" },
+  ],
   COL: [
     { name: "Amazonas", ebirdCode: "CO-AMA" },
     { name: "Antioquia", ebirdCode: "CO-ANT" },
@@ -3934,6 +3955,12 @@ function checklistOrLocationUrl(obs, fallbackUrl = "") {
   return fallbackUrl;
 }
 
+function hotspotCurrentMonthBirdListUrl(hotspot) {
+  if (hotspot?.locId) return `https://ebird.org/hotspot/${encodeURIComponent(hotspot.locId)}/bird-list?yr=curM`;
+  const match = String(hotspot?.url || "").match(/https:\/\/ebird\.org\/hotspot\/([^/?#]+)/i);
+  return match ? `https://ebird.org/hotspot/${encodeURIComponent(match[1])}/bird-list?yr=curM` : hotspot?.url || "";
+}
+
 function htmlAttribute(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -4049,7 +4076,11 @@ async function renderHotspots(result) {
           <div>
             <div class="hotspot-title">
               <div class="hotspot-name-row">
-                <h3>${hotspot.url ? `<a href="${hotspot.url}" target="_blank" rel="noreferrer">${hotspot.name}</a>` : hotspot.name}</h3>
+                <h3>${
+                  hotspotCurrentMonthBirdListUrl(hotspot)
+                    ? `<a class="hotspot-bird-list-link" href="${htmlAttribute(hotspotCurrentMonthBirdListUrl(hotspot))}" data-loc-id="${htmlAttribute(hotspot.locId || "")}" target="_blank" rel="noopener noreferrer">${hotspot.name}</a>`
+                    : hotspot.name
+                }</h3>
                 <button
                   class="preferred-hotspot-button ${hotspot.isPreferred ? "is-preferred" : ""}"
                   type="button"
@@ -5921,10 +5952,23 @@ function handlePreferredHotspotClick(event) {
   refreshScoredPanels();
 }
 
+function handleHotspotBirdListClick(event) {
+  const link = event.target.closest(".hotspot-bird-list-link");
+  if (!link) return;
+
+  const locId = link.dataset.locId;
+  if (!locId) return;
+
+  event.preventDefault();
+  const url = `https://ebird.org/hotspot/${encodeURIComponent(locId)}/bird-list?yr=curM`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 fields.stateSelect.addEventListener("change", loadCountiesForSelectedState);
 fields.regionSelect.addEventListener("change", refreshSelectedCountyData);
 fields.useCurrentLocation?.addEventListener("click", useCurrentLocation);
 document.querySelector("#hotspotGrid")?.addEventListener("click", handlePreferredHotspotClick);
+document.querySelector("#hotspotGrid")?.addEventListener("click", handleHotspotBirdListClick);
 fields.birdsCrossed.addEventListener("input", syncBirdcastDisplaysFromInputs);
 fields.birdsInFlight.addEventListener("input", syncBirdcastDisplaysFromInputs);
 birdSearchInput?.addEventListener("input", updateBirdFinderMatches);
