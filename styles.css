@@ -426,7 +426,34 @@ main {
   font-weight: 650;
 }
 
+.bird-finder-results {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 0.92fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.bird-finder-result,
+.bird-finder-nearby {
+  min-height: 110px;
+  padding: 12px 14px;
+  border: 1px solid rgba(31, 76, 54, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 253, 247, 0.74);
+}
+
+.bird-finder-nearby {
+  color: var(--moss-dark);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
 .bird-finder-result.is-searching {
+  color: #b3261e;
+  animation: bird-finder-pulse 0.9s ease-in-out infinite;
+}
+
+.bird-finder-nearby.is-searching {
   color: #b3261e;
   animation: bird-finder-pulse 0.9s ease-in-out infinite;
 }
@@ -537,6 +564,43 @@ main {
 
 .bird-finder-card h3 a {
   color: var(--ink);
+}
+
+.bird-finder-nearby h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.nearby-sighting-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nearby-sighting-list li {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(31, 76, 54, 0.1);
+}
+
+.nearby-sighting-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.nearby-sighting-list a {
+  color: var(--lagoon);
+  font-weight: 900;
+}
+
+.nearby-sighting-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .species-status {
@@ -2032,6 +2096,7 @@ a:focus-visible {
   .hotspot-grid,
   .guide-intro,
   .guide-grid,
+  .bird-finder-results,
   .bird-finder-form,
   .source-panel {
     grid-template-columns: 1fr;

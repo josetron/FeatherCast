@@ -356,6 +356,18 @@ const countyCache = new Map();
 const countyActivityCache = new Map();
 
 const historicalMigrantCountyLeaders = {
+  AL: [
+    "US-AL-097",
+    "US-AL-003",
+    "US-AL-073",
+    "US-AL-089",
+    "US-AL-101",
+    "US-AL-083",
+    "US-AL-117",
+    "US-AL-015",
+    "US-AL-049",
+    "US-AL-125",
+  ],
   AZ: [
     "US-AZ-003",
     "US-AZ-019",
@@ -379,6 +391,18 @@ const historicalMigrantCountyLeaders = {
     "US-FL-103",
     "US-FL-057",
     "US-FL-115",
+  ],
+  LA: [
+    "US-LA-071",
+    "US-LA-051",
+    "US-LA-057",
+    "US-LA-033",
+    "US-LA-075",
+    "US-LA-087",
+    "US-LA-063",
+    "US-LA-109",
+    "US-LA-005",
+    "US-LA-103",
   ],
   AK: [
     "US-AK-020",
@@ -540,6 +564,75 @@ const historicalMigrantCountyLeaders = {
 };
 
 const offlineCountyData = {
+  AL: `
+001|Autauga County
+003|Baldwin County
+005|Barbour County
+007|Bibb County
+009|Blount County
+011|Bullock County
+013|Butler County
+015|Calhoun County
+017|Chambers County
+019|Cherokee County
+021|Chilton County
+023|Choctaw County
+025|Clarke County
+027|Clay County
+029|Cleburne County
+031|Coffee County
+033|Colbert County
+035|Conecuh County
+037|Coosa County
+039|Covington County
+041|Crenshaw County
+043|Cullman County
+045|Dale County
+047|Dallas County
+049|DeKalb County
+051|Elmore County
+053|Escambia County
+055|Etowah County
+057|Fayette County
+059|Franklin County
+061|Geneva County
+063|Greene County
+065|Hale County
+067|Henry County
+069|Houston County
+071|Jackson County
+073|Jefferson County
+075|Lamar County
+077|Lauderdale County
+079|Lawrence County
+081|Lee County
+083|Limestone County
+085|Lowndes County
+087|Macon County
+089|Madison County
+091|Marengo County
+093|Marion County
+095|Marshall County
+097|Mobile County
+099|Monroe County
+101|Montgomery County
+103|Morgan County
+105|Perry County
+107|Pickens County
+109|Pike County
+111|Randolph County
+113|Russell County
+115|St. Clair County
+117|Shelby County
+119|Sumter County
+121|Talladega County
+123|Tallapoosa County
+125|Tuscaloosa County
+127|Walker County
+129|Washington County
+131|Wilcox County
+133|Winston County
+`,
   AK: `
 013|Aleutians East Borough
 016|Aleutians West Census Area
@@ -961,6 +1054,72 @@ const offlineCountyData = {
 199|Williamson County
 201|Winnebago County
 203|Woodford County
+`,
+  LA: `
+001|Acadia Parish
+003|Allen Parish
+005|Ascension Parish
+007|Assumption Parish
+009|Avoyelles Parish
+011|Beauregard Parish
+013|Bienville Parish
+015|Bossier Parish
+017|Caddo Parish
+019|Calcasieu Parish
+021|Caldwell Parish
+023|Cameron Parish
+025|Catahoula Parish
+027|Claiborne Parish
+029|Concordia Parish
+031|De Soto Parish
+033|East Baton Rouge Parish
+035|East Carroll Parish
+037|East Feliciana Parish
+039|Evangeline Parish
+041|Franklin Parish
+043|Grant Parish
+045|Iberia Parish
+047|Iberville Parish
+049|Jackson Parish
+051|Jefferson Parish
+053|Jefferson Davis Parish
+055|Lafayette Parish
+057|Lafourche Parish
+059|La Salle Parish
+061|Lincoln Parish
+063|Livingston Parish
+065|Madison Parish
+067|Morehouse Parish
+069|Natchitoches Parish
+071|Orleans Parish
+073|Ouachita Parish
+075|Plaquemines Parish
+077|Pointe Coupee Parish
+079|Rapides Parish
+081|Red River Parish
+083|Richland Parish
+085|Sabine Parish
+087|St. Bernard Parish
+089|St. Charles Parish
+091|St. Helena Parish
+093|St. James Parish
+095|St. John the Baptist Parish
+097|St. Landry Parish
+099|St. Martin Parish
+101|St. Mary Parish
+103|St. Tammany Parish
+105|Tangipahoa Parish
+107|Tensas Parish
+109|Terrebonne Parish
+111|Union Parish
+113|Vermilion Parish
+115|Vernon Parish
+117|Washington Parish
+119|Webster Parish
+121|West Baton Rouge Parish
+123|West Carroll Parish
+125|West Feliciana Parish
+127|Winn Parish
 `,
   NC: `
 001|Alamance County
@@ -2015,6 +2174,7 @@ const birdSearchInput = document.querySelector("#birdSearchInput");
 const birdMatchLabel = document.querySelector("#birdMatchLabel");
 const birdMatchSelect = document.querySelector("#birdMatchSelect");
 const birdFinderResult = document.querySelector("#birdFinderResult");
+const birdFinderNearby = document.querySelector("#birdFinderNearby");
 const feedbackForm = document.querySelector("#feedbackForm");
 const feedbackName = document.querySelector("#feedbackName");
 const feedbackEmail = document.querySelector("#feedbackEmail");
@@ -3414,6 +3574,13 @@ function displaySpeciesName(name) {
   return String(name || "").replace(/\s+\([^)]*\)$/g, "");
 }
 
+function checklistOrLocationUrl(obs, fallbackUrl = "") {
+  const checklistId = obs?.subId || obs?.checklistId || "";
+  if (checklistId) return `https://ebird.org/checklist/${checklistId}`;
+  if (obs?.locId) return `https://ebird.org/hotspot/${obs.locId}`;
+  return fallbackUrl;
+}
+
 async function renderHotspots(result) {
   const region = getRegion();
   const renderRegionCode = region.ebirdCode;
@@ -3878,6 +4045,63 @@ function birdFinderNameProximity(query, name) {
   return 3;
 }
 
+async function resolveRegionLocation(region) {
+  const title = wikipediaTitleForRegion(region);
+  if (!title) return null;
+  const cachedLocation = weatherLocationCache.get(title);
+  if (cachedLocation?.latitude && cachedLocation?.longitude) return cachedLocation;
+
+  const queries = [
+    `${region.name}, ${region.state}`,
+    region.name,
+    region.name.replace(/\s+County$/i, ""),
+  ].filter(Boolean);
+  const geoResults = [];
+
+  for (const query of queries) {
+    const geoResponse = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`,
+    );
+    const geo = await geoResponse.json();
+    geoResults.push(...(geo.results || []));
+    if (geoResults.length) break;
+  }
+
+  const match = geoResults.find((item) =>
+    String(item.admin1 || "").toLowerCase().includes(String(region.state || "").toLowerCase()),
+  ) || geoResults[0];
+  if (!match) return null;
+
+  const location = { latitude: match.latitude, longitude: match.longitude };
+  weatherLocationCache.set(title, location);
+  return location;
+}
+
+function distanceMiles(lat1, lon1, lat2, lon2) {
+  const aLat = Number(lat1);
+  const aLon = Number(lon1);
+  const bLat = Number(lat2);
+  const bLon = Number(lon2);
+  if (![aLat, aLon, bLat, bLon].every(Number.isFinite)) return null;
+  const toRadians = (degrees) => degrees * Math.PI / 180;
+  const earthMiles = 3958.8;
+  const dLat = toRadians(bLat - aLat);
+  const dLon = toRadians(bLon - aLon);
+  const h = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(aLat)) * Math.cos(toRadians(bLat)) * Math.sin(dLon / 2) ** 2;
+  return earthMiles * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function uniqueObservations(observations) {
+  const seen = new Set();
+  return observations.filter((obs) => {
+    const key = obs.subId || obs.checklistId || `${obs.locId || obs.locName}-${obs.obsDt}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function birdFinderYearSampleDates() {
   const today = new Date();
   const dates = [];
@@ -3965,6 +4189,40 @@ function renderBirdMatches(matches) {
 
 function formatFinderObservation(obs) {
   return [obs?.locName, obs?.obsDt].filter(Boolean).join(" on ");
+}
+
+function renderNearbySightings(bird, sightings, sourceLabel, regionLocation = null) {
+  if (!birdFinderNearby) return;
+  birdFinderNearby.classList.remove("is-searching");
+
+  if (!sightings.length) {
+    birdFinderNearby.innerHTML = `
+      <h3>Recently spotted nearby</h3>
+      <p>No nearby recent sightings were found around this selected area.</p>
+    `;
+    return;
+  }
+
+  const rows = sightings.slice(0, 5).map((obs) => {
+    const distance = regionLocation
+      ? distanceMiles(regionLocation.latitude, regionLocation.longitude, obs.lat, obs.lng)
+      : null;
+    const distanceText = distance === null ? "" : ` Â· about ${Math.max(1, Math.round(distance))} mi away`;
+    const countText = Number(obs.howMany) > 0 ? `${obs.howMany} seen` : "Seen";
+    const url = checklistOrLocationUrl(obs, `https://ebird.org/species/${bird.code}`);
+    return `
+      <li>
+        <a href="${url}" target="_blank" rel="noreferrer">${obs.locName || "Recent eBird location"}</a>
+        <span class="nearby-sighting-meta">${countText} Â· ${obs.obsDt || "recent report"}${distanceText}</span>
+      </li>
+    `;
+  }).join("");
+
+  birdFinderNearby.innerHTML = `
+    <h3>Recently spotted nearby</h3>
+    <p class="nearby-sighting-meta">${sourceLabel}</p>
+    <ul class="nearby-sighting-list">${rows}</ul>
+  `;
 }
 
 function todayEbirdDateParts() {
@@ -4080,31 +4338,142 @@ async function historicalAnyTimeCheck(regionCode, speciesCode) {
   return observationCount;
 }
 
+async function fetchNearbyBirdSightings(region, bird, countyRecent = []) {
+  const countySightings = uniqueObservations(countyRecent)
+    .slice(0, 5);
+  const regionLocation = await resolveRegionLocation(region);
+  const sortByDistance = (observations) =>
+    uniqueObservations(observations)
+      .map((obs) => ({
+        ...obs,
+        distanceMiles: regionLocation
+          ? distanceMiles(regionLocation.latitude, regionLocation.longitude, obs.lat, obs.lng)
+          : null,
+      }))
+      .sort((a, b) =>
+        (a.distanceMiles ?? Number.POSITIVE_INFINITY) - (b.distanceMiles ?? Number.POSITIVE_INFINITY) ||
+        String(b.obsDt || "").localeCompare(String(a.obsDt || "")),
+      )
+      .slice(0, 5);
+  const fetchRegionSightings = async (regionCode, maxResults = 100) => {
+    try {
+      return await fetchEbirdJson(
+        `data/obs/${regionCode}/recent/${bird.code}?back=30&includeProvisional=true&maxResults=${maxResults}`,
+        EBIRD_API_TOKEN,
+      );
+    } catch {
+      return [];
+    }
+  };
+
+  if (countySightings.length) {
+    return {
+      sightings: sortByDistance(countySightings),
+      sourceLabel: `Recent reports inside ${region.name}.`,
+      regionLocation,
+    };
+  }
+
+  const regionCode = String(region.ebirdCode || "");
+  const stateRegionMatch = regionCode.match(/^(US-[A-Z]{2})(?:-\d+)?$/);
+  const stateRegionCode = stateRegionMatch?.[1] || "";
+
+  if (stateRegionCode && stateRegionCode !== regionCode) {
+    const stateSightings = sortByDistance(await fetchRegionSightings(stateRegionCode, 100));
+    if (stateSightings.length) {
+      return {
+        sightings: stateSightings,
+        sourceLabel: `No recent ${region.name} report was found, so this shows recent reports from other counties in the same state.`,
+        regionLocation,
+      };
+    }
+  }
+
+  const countryRegionCode = regionCode.split("-")[0];
+  if (countryRegionCode && countryRegionCode !== regionCode && countryRegionCode !== "US") {
+    const countrySightings = sortByDistance(await fetchRegionSightings(countryRegionCode, 100));
+    if (countrySightings.length) {
+      return {
+        sightings: countrySightings,
+        sourceLabel: `No recent ${region.name} report was found, so this shows recent reports elsewhere in ${getSelectedState().name}.`,
+        regionLocation,
+      };
+    }
+  }
+
+  if (countryRegionCode === "US" || stateRegionCode) {
+    const usSightings = sortByDistance(await fetchRegionSightings("US", 200));
+    if (usSightings.length) {
+      return {
+        sightings: usSightings,
+        sourceLabel: `No recent report was found in the selected county or state, so this shows the closest recent reports found elsewhere in the US.`,
+        regionLocation,
+      };
+    }
+  }
+
+  const countrySearchOrder = [
+    ...countries.map((country) => country.ebirdCode),
+    "US",
+  ].filter((code, index, values) => code && code !== countryRegionCode && values.indexOf(code) === index);
+
+  for (const countryCode of countrySearchOrder) {
+    const countrySightings = sortByDistance(await fetchRegionSightings(countryCode, 100));
+    if (countrySightings.length) {
+      const countryName = countries.find((country) => country.ebirdCode === countryCode)?.name ||
+        (countryCode === "US" ? "the United States" : countryCode);
+      return {
+        sightings: countrySightings,
+        sourceLabel: `No recent report was found in the selected region, so this expands to recent reports in ${countryName}.`,
+        regionLocation,
+      };
+    }
+  }
+
+  if (!regionLocation) {
+    return {
+      sightings: [],
+      sourceLabel: "Could not locate the selected area center for a wider search.",
+      regionLocation: null,
+    };
+  }
+
+  return {
+    sightings: [],
+    sourceLabel: "No recent reports were found in the selected county, state, US, or configured country searches.",
+    regionLocation,
+  };
+}
+
 async function runBirdFinderSearch(bird, requestId = ++birdFinderRequestId) {
   const region = getRegion();
   if (!bird || !region.ebirdCode || !birdFinderResult) return;
   birdFinderResult.classList.add("is-searching");
   birdFinderResult.textContent = `Checking ${bird.name} in ${region.name}...`;
+  if (birdFinderNearby) {
+    birdFinderNearby.classList.add("is-searching");
+    birdFinderNearby.textContent = `Looking for recent nearby ${bird.name} sightings...`;
+  }
   try {
-    const [recent, historicYears, photoUrl, status] = await Promise.all([
-      fetchEbirdJson(
-        `data/obs/${region.ebirdCode}/recent/${bird.code}?back=30&includeProvisional=true&maxResults=10`,
-        EBIRD_API_TOKEN,
-      ),
+    const recentPromise = fetchEbirdJson(
+      `data/obs/${region.ebirdCode}/recent/${bird.code}?back=30&includeProvisional=true&maxResults=10`,
+      EBIRD_API_TOKEN,
+    );
+    const [recent, historicYears, photoUrl, status, nearbyResult] = await Promise.all([
+      recentPromise,
       historicalSeasonCheck(region.ebirdCode, bird.code),
       speciesPhotoUrl(bird.name),
       speciesStatus(bird.code),
+      recentPromise
+        .then((countyRecent) => fetchNearbyBirdSightings(region, bird, countyRecent))
+        .catch(() => ({ sightings: [], sourceLabel: "Nearby sightings could not be loaded.", regionLocation: null })),
     ]);
     const priorFiveYearCount = historicYears
       ? 0
       : await historicalAnyTimeCheck(region.ebirdCode, bird.code);
     const latest = recent[0];
     const speciesUrl = `https://ebird.org/species/${bird.code}`;
-    const latestUrl = latest?.subId
-      ? `https://ebird.org/checklist/${latest.subId}`
-      : latest?.locId
-        ? `https://ebird.org/hotspot/${latest.locId}`
-        : speciesUrl;
+    const latestUrl = checklistOrLocationUrl(latest, speciesUrl);
     const recentText = latest
       ? `Latest recent report: <a href="${latestUrl}" target="_blank" rel="noreferrer">${formatFinderObservation(latest)}</a>.`
       : "No recent county report returned in the last 30 days.";
@@ -4118,6 +4487,7 @@ async function runBirdFinderSearch(bird, requestId = ++birdFinderRequestId) {
       : "";
     if (requestId !== birdFinderRequestId) return;
     birdFinderResult.classList.remove("is-searching");
+    renderNearbySightings(bird, nearbyResult.sightings, nearbyResult.sourceLabel, nearbyResult.regionLocation);
     birdFinderResult.innerHTML = `
       <div class="bird-finder-card">
         <a class="bird-finder-photo" href="${speciesUrl}" target="_blank" rel="noreferrer" title="Open species page">
@@ -4134,6 +4504,10 @@ async function runBirdFinderSearch(bird, requestId = ++birdFinderRequestId) {
     if (requestId !== birdFinderRequestId) return;
     birdFinderResult.classList.remove("is-searching");
     birdFinderResult.textContent = `Could not load eBird details for ${bird.name}.`;
+    if (birdFinderNearby) {
+      birdFinderNearby.classList.remove("is-searching");
+      birdFinderNearby.textContent = `Could not load nearby sightings for ${bird.name}.`;
+    }
   }
 }
 
@@ -4146,6 +4520,10 @@ async function updateBirdFinderMatches() {
     birdFinderResult.classList.remove("is-searching");
     renderBirdMatches([]);
     birdFinderResult.textContent = "Search a species to check recent county reports and seasonal history.";
+    if (birdFinderNearby) {
+      birdFinderNearby.classList.remove("is-searching");
+      birdFinderNearby.textContent = "Recent nearby sightings will appear after you choose a bird.";
+    }
     return;
   }
   birdFinderResult.classList.add("is-searching");
@@ -4171,6 +4549,10 @@ async function updateBirdFinderMatches() {
       birdFinderResult.classList.remove("is-searching");
       renderBirdMatches([]);
       birdFinderResult.textContent = "No matching bird names found.";
+      if (birdFinderNearby) {
+        birdFinderNearby.classList.remove("is-searching");
+        birdFinderNearby.textContent = "No nearby sightings to show until a bird match is selected.";
+      }
       return;
     }
     renderBirdMatches(matches);
