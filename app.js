@@ -2029,6 +2029,7 @@ const fields = {
   stateSelect: document.querySelector("#stateSelect"),
   regionSelect: document.querySelector("#regionSelect"),
   countyStatus: document.querySelector("#countyStatus"),
+  useCurrentLocation: document.querySelector("#useCurrentLocation"),
   manualCountyName: document.querySelector("#manualCountyName"),
   manualRegionCode: document.querySelector("#manualRegionCode"),
   manualStateAbbr: document.querySelector("#manualStateAbbr"),
@@ -2094,6 +2095,7 @@ const windMapStatus = document.querySelector("#windMapStatus");
 const frontLine = document.querySelector("#frontLine");
 const hotspotCache = new Map();
 const hotspotMoreInfoCache = new Map();
+const preferredHotspotStorageKey = "feathercastPreferredHotspots";
 const regionPhotoCache = new Map();
 const speciesPhotoCache = new Map();
 const speciesStatusCache = new Map();
@@ -3932,6 +3934,67 @@ function checklistOrLocationUrl(obs, fallbackUrl = "") {
   return fallbackUrl;
 }
 
+function htmlAttribute(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function hotspotIdentity(hotspot) {
+  return String(hotspot?.locId || hotspot?.url || hotspot?.name || "location")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function preferredHotspotKey(regionCode, hotspot) {
+  return `${regionCode || "manual"}::${hotspotIdentity(hotspot)}`;
+}
+
+function readPreferredHotspots() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(preferredHotspotStorageKey) || "[]");
+    return new Set(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writePreferredHotspots(preferred) {
+  try {
+    localStorage.setItem(preferredHotspotStorageKey, JSON.stringify([...preferred]));
+  } catch {
+    // If browser storage is blocked, the heart still updates for the current render.
+  }
+}
+
+function isPreferredHotspot(regionCode, hotspot) {
+  return readPreferredHotspots().has(preferredHotspotKey(regionCode, hotspot));
+}
+
+function setPreferredHotspot(regionCode, hotspotKey, shouldPrefer) {
+  const preferred = readPreferredHotspots();
+  const storageKey = `${regionCode || "manual"}::${hotspotKey}`;
+  if (shouldPrefer) {
+    preferred.add(storageKey);
+  } else {
+    preferred.delete(storageKey);
+  }
+  writePreferredHotspots(preferred);
+}
+
+function updatePreferredHotspotButton(button, isPreferred) {
+  button.classList.toggle("is-preferred", isPreferred);
+  button.setAttribute("aria-pressed", String(isPreferred));
+  button.setAttribute(
+    "aria-label",
+    isPreferred ? "Remove preferred hotspot" : "Save as preferred hotspot",
+  );
+  button.innerHTML = isPreferred ? "&#9829;" : "&#9825;";
+}
+
 async function renderHotspots(result) {
   const region = getRegion();
   const renderRegionCode = region.ebirdCode;
@@ -3970,9 +4033,11 @@ async function renderHotspots(result) {
     .map((hotspot, index) => ({
       ...hotspot,
       renderKey: `hotspot-${index}-${String(hotspot.locId || hotspot.name || "location").replace(/[^a-z0-9]+/gi, "-")}`,
+      preferredKey: hotspotIdentity(hotspot),
+      isPreferred: isPreferredHotspot(renderRegionCode, hotspot),
       score: hotspotScore(hotspot.base, result.score, index),
     }))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => Number(b.isPreferred) - Number(a.isPreferred) || b.score - a.score);
 
   const cards = scoredHotspots.map(async (hotspot, index) => {
       const speciesRows = hotspot.species?.length
@@ -3983,7 +4048,17 @@ async function renderHotspots(result) {
           <div class="rank">${index + 1}</div>
           <div>
             <div class="hotspot-title">
-              <h3>${hotspot.url ? `<a href="${hotspot.url}" target="_blank" rel="noreferrer">${hotspot.name}</a>` : hotspot.name}</h3>
+              <div class="hotspot-name-row">
+                <h3>${hotspot.url ? `<a href="${hotspot.url}" target="_blank" rel="noreferrer">${hotspot.name}</a>` : hotspot.name}</h3>
+                <button
+                  class="preferred-hotspot-button ${hotspot.isPreferred ? "is-preferred" : ""}"
+                  type="button"
+                  data-region-code="${htmlAttribute(renderRegionCode)}"
+                  data-hotspot-key="${htmlAttribute(hotspot.preferredKey)}"
+                  aria-pressed="${hotspot.isPreferred ? "true" : "false"}"
+                  aria-label="${hotspot.isPreferred ? "Remove preferred hotspot" : "Save as preferred hotspot"}"
+                >${hotspot.isPreferred ? "&#9829;" : "&#9825;"}</button>
+              </div>
               <span>${hotspot.score}</span>
             </div>
             <p class="hotspot-links">
@@ -4196,6 +4271,205 @@ function regionCodeFromCountyName(countyName, state) {
     (county) => normalizeCountyName(county.name) === normalizedName,
   );
   return match?.ebirdCode || "";
+}
+
+function stateByFips(fips) {
+  return states.find((state) => state.fips === String(fips || "").padStart(2, "0"));
+}
+
+function stateByNameOrCode(value) {
+  const normalized = String(value || "").toLowerCase();
+  const code = String(value || "").split("-").pop().toUpperCase();
+  return states.find(
+    (state) =>
+      state.abbr === code ||
+      state.abbr.toLowerCase() === normalized ||
+      state.name.toLowerCase() === normalized,
+  );
+}
+
+function formatDetectedCountyName(name, state) {
+  const cleaned = String(name || "").trim();
+  if (!cleaned) return "";
+  if (/\b(county|parish|borough|census area|municipality)\b/i.test(cleaned)) return cleaned;
+  if (state?.abbr === "LA") return `${cleaned} Parish`;
+  return `${cleaned} County`;
+}
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Current location is not available in this browser."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      maximumAge: 10 * 60 * 1000,
+      timeout: 12000,
+    });
+  });
+}
+
+function parseCensusLocation(data) {
+  const geographies = data?.result?.geographies || {};
+  const county = geographies.Counties?.[0];
+  const stateGeo = geographies.States?.[0];
+  const state = stateByFips(county?.STATE || stateGeo?.STATE);
+
+  if (!county || !state) return null;
+
+  return {
+    countyName: `${county.NAME} County`,
+    countyFips: county.COUNTY,
+    stateAbbr: state.abbr,
+    stateName: state.name,
+    ebirdCode: `US-${state.abbr}-${county.COUNTY}`,
+  };
+}
+
+function parseBigDataCloudLocation(data) {
+  const state = stateByNameOrCode(data?.principalSubdivisionCode || data?.principalSubdivision);
+  if (!state || data?.countryCode !== "US") return null;
+  const administrative = data?.localityInfo?.administrative || [];
+  const county =
+    administrative.find((item) => /\bcounty\b/i.test(`${item.name || ""} ${item.description || ""}`)) ||
+    administrative.find((item) => /\b(parish|borough|census area|municipality)\b/i.test(`${item.name || ""} ${item.description || ""}`));
+  const countyName = formatDetectedCountyName(county?.name, state);
+  if (!countyName) return null;
+
+  return {
+    countyName,
+    countyFips: "",
+    stateAbbr: state.abbr,
+    stateName: state.name,
+    ebirdCode: regionCodeFromCountyName(countyName, state),
+  };
+}
+
+function parseNominatimLocation(data) {
+  if (String(data?.address?.country_code || "").toUpperCase() !== "US") return null;
+  const state = stateByNameOrCode(data?.address?.state);
+  const countyName = formatDetectedCountyName(
+    data?.address?.county ||
+      data?.address?.borough ||
+      data?.address?.municipality ||
+      data?.address?.state_district,
+    state,
+  );
+  if (!state || !countyName) return null;
+
+  return {
+    countyName,
+    countyFips: "",
+    stateAbbr: state.abbr,
+    stateName: state.name,
+    ebirdCode: regionCodeFromCountyName(countyName, state),
+  };
+}
+
+async function fetchCountyFromCoordinates(lat, lon) {
+  const query = new URLSearchParams({
+    lat: String(lat),
+    lon: String(lon),
+  });
+
+  if (window.location.protocol !== "file:") {
+    try {
+      const response = await fetch(`/api/location-region?${query.toString()}`);
+      if (response.ok) return response.json();
+    } catch {
+      // Fall back to the public Census endpoint below.
+    }
+  }
+
+  const browserFriendlyLookups = [
+    {
+      url: `https://api.bigdatacloud.net/data/reverse-geocode-client?${new URLSearchParams({
+        latitude: String(lat),
+        longitude: String(lon),
+        localityLanguage: "en",
+      }).toString()}`,
+      parse: parseBigDataCloudLocation,
+    },
+    {
+      url: `https://nominatim.openstreetmap.org/reverse?${new URLSearchParams({
+        format: "jsonv2",
+        lat: String(lat),
+        lon: String(lon),
+        zoom: "10",
+        addressdetails: "1",
+      }).toString()}`,
+      parse: parseNominatimLocation,
+    },
+    {
+      url: `https://geocoding.geo.census.gov/geocoder/geographies/coordinates?${new URLSearchParams({
+        x: String(lon),
+        y: String(lat),
+        benchmark: "Public_AR_Current",
+        vintage: "Current_Current",
+        format: "json",
+      }).toString()}`,
+      parse: parseCensusLocation,
+    },
+  ];
+
+  for (const lookup of browserFriendlyLookups) {
+    try {
+      const response = await fetch(lookup.url);
+      if (!response.ok) continue;
+      const location = lookup.parse(await response.json());
+      if (location) return location;
+    } catch {
+      // Try the next location service.
+    }
+  }
+
+  throw new Error("Could not match your current location to a US county yet.");
+}
+
+function selectManualRegion(location) {
+  const state = states.find((item) => item.abbr === location.stateAbbr) || getSelectedState();
+  fields.regionSelect.value = "manual";
+  fields.manualCountyName.value = location.countyName || "Current County";
+  fields.manualRegionCode.value = location.ebirdCode || regionCodeFromCountyName(location.countyName, state);
+  fields.manualStateAbbr.value = location.stateAbbr || state.abbr;
+}
+
+async function useCurrentLocation() {
+  const button = fields.useCurrentLocation;
+  if (button) button.disabled = true;
+  setCountyStatus("Finding your current county...");
+
+  try {
+    const position = await getCurrentPosition();
+    const { latitude, longitude } = position.coords;
+    const location = await fetchCountyFromCoordinates(latitude, longitude);
+    const state = states.find((item) => item.abbr === location.stateAbbr);
+    if (!state) throw new Error("Current location matched a region that is not in the state list yet.");
+
+    fields.stateSelect.value = state.abbr;
+    await loadCountiesForSelectedState();
+
+    const countyOption = [...fields.regionSelect.options].find(
+      (option) =>
+        option.value === location.ebirdCode ||
+        normalizeCountyName(option.dataset.name || option.textContent) === normalizeCountyName(location.countyName),
+    );
+
+    if (countyOption) {
+      fields.regionSelect.value = countyOption.value;
+    } else {
+      selectManualRegion(location);
+    }
+
+    setCountyStatus(`Using current location: ${location.countyName}, ${state.name}.`);
+    refreshSelectedCountyData();
+    updateDashboard();
+  } catch (error) {
+    setCountyStatus(error.message || "Could not use current location.");
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 function sortCountiesByHistoricalMigrantPriority(counties, state) {
@@ -5637,8 +5911,20 @@ function updateDashboard() {
   refreshScoredPanels();
 }
 
+function handlePreferredHotspotClick(event) {
+  const button = event.target.closest(".preferred-hotspot-button");
+  if (!button) return;
+
+  const isPreferred = button.getAttribute("aria-pressed") !== "true";
+  setPreferredHotspot(button.dataset.regionCode, button.dataset.hotspotKey, isPreferred);
+  updatePreferredHotspotButton(button, isPreferred);
+  refreshScoredPanels();
+}
+
 fields.stateSelect.addEventListener("change", loadCountiesForSelectedState);
 fields.regionSelect.addEventListener("change", refreshSelectedCountyData);
+fields.useCurrentLocation?.addEventListener("click", useCurrentLocation);
+document.querySelector("#hotspotGrid")?.addEventListener("click", handlePreferredHotspotClick);
 fields.birdsCrossed.addEventListener("input", syncBirdcastDisplaysFromInputs);
 fields.birdsInFlight.addEventListener("input", syncBirdcastDisplaysFromInputs);
 birdSearchInput?.addEventListener("input", updateBirdFinderMatches);

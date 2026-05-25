@@ -1181,6 +1181,37 @@ main {
   margin-bottom: 18px;
 }
 
+.control-panel > .panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.current-location-button {
+  border: 0;
+  background: transparent;
+  color: var(--moss-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  opacity: 0.78;
+}
+
+.current-location-button:hover,
+.current-location-button:focus-visible {
+  opacity: 1;
+}
+
+.current-location-button:disabled {
+  cursor: wait;
+  opacity: 0.48;
+}
+
 #speciesRegionTitle {
   display: block;
   margin-top: 4px;
@@ -1679,6 +1710,7 @@ a:focus-visible {
   grid-template-columns: 34px 1fr;
   gap: 4px;
   padding: 8px 12px;
+  min-width: 0;
   box-shadow: var(--soft-shadow);
   background:
     linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(248, 246, 238, 0.96));
@@ -1705,12 +1737,48 @@ a:focus-visible {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+}
+
+.hotspot-name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
 }
 
 .hotspot-title h3 {
+  min-width: 0;
   margin-bottom: 2px;
   font-size: 0.92rem;
   color: #18251f;
+  overflow-wrap: anywhere;
+}
+
+.preferred-hotspot-button {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #a8b4aa;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.preferred-hotspot-button:hover,
+.preferred-hotspot-button:focus-visible {
+  background: #eef5ed;
+  color: #cf3e46;
+}
+
+.preferred-hotspot-button.is-preferred {
+  color: #d92835;
 }
 
 .hotspot-title span {
