@@ -2450,7 +2450,7 @@ function syncSignalDisplays() {
   if (windDirectionDisplay) windDirectionDisplay.textContent = fields.windDirection.selectedOptions[0]?.textContent || "";
   if (rainDisplay) rainDisplay.textContent = fields.rain.selectedOptions[0]?.textContent || "";
   if (frontStatusDisplay) frontStatusDisplay.textContent = fields.frontStatus.selectedOptions[0]?.textContent || "No front nearby";
-  if (frontMapLinks) frontMapLinks.classList.toggle("is-hidden", fields.frontStatus.value === "none");
+
   if (frontPassageDisplay) {
     const manualFrontPassage = fields.frontPassage.value.trim();
     const impliedFrontPassage = {
@@ -3205,6 +3205,22 @@ function renderRisk(result) {
     .slice(0, 5)
     .map((reason) => `<p>${reason}</p>`)
     .join("");
+
+  // Update background and border intensity class dynamically
+  const riskPanel = document.querySelector(".risk-panel");
+  if (riskPanel) {
+    riskPanel.classList.remove("is-low", "is-medium", "is-high", "is-extreme");
+    const score = Number(result.score || 0);
+    if (score < 30) {
+      riskPanel.classList.add("is-low");
+    } else if (score < 60) {
+      riskPanel.classList.add("is-medium");
+    } else if (score < 80) {
+      riskPanel.classList.add("is-high");
+    } else {
+      riskPanel.classList.add("is-extreme");
+    }
+  }
 }
 
 function renderInsights(signals, result) {
@@ -3807,25 +3823,63 @@ async function updateCurrentWeather(region) {
     return;
   }
 
-  currentWeather.textContent = "Weather loading...";
-  try {
-    const queries = [
-      `${region.name}, ${region.state}`,
-      region.name,
-      region.name.replace(/\s+County$/i, ""),
-    ].filter(Boolean);
-    const geoResults = [];
-    for (const query of queries) {
+async function geocodeRegionSearch(region) {
+  const queries = [
+    `${region.name}, ${region.state}`,
+    region.name,
+    region.name.replace(/\s+County$/i, ""),
+  ].filter(Boolean);
+  const geoResults = [];
+
+  for (const query of queries) {
+    try {
       const geoResponse = await fetch(
         `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`,
       );
       const geo = await geoResponse.json();
-      geoResults.push(...(geo.results || []));
-      if (geoResults.length) break;
+      if (geo.results && geo.results.length) {
+        geoResults.push(...geo.results);
+        break;
+      }
+    } catch (e) {
+      console.warn("Open-Meteo geocoding search failed:", e);
     }
-    const match = geoResults.find((item) =>
-      String(item.admin1 || "").toLowerCase().includes(String(region.state || "").toLowerCase()),
-    ) || geoResults[0];
+  }
+
+  let match = geoResults.find((item) =>
+    String(item.admin1 || "").toLowerCase().includes(String(region.state || "").toLowerCase()),
+  );
+
+  if (!match && region.state) {
+    try {
+      const osmResponse = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${region.name}, ${region.state}`)}&format=json&limit=1`,
+        { headers: { "User-Agent": "FeatherCast-App/1.0" } }
+      );
+      const osmResults = await osmResponse.json();
+      if (osmResults && osmResults.length > 0) {
+        match = {
+          latitude: Number(osmResults[0].lat),
+          longitude: Number(osmResults[0].lon),
+          name: osmResults[0].name,
+          admin1: region.state,
+        };
+      }
+    } catch (e) {
+      console.warn("Nominatim geocoding search fallback failed:", e);
+    }
+  }
+
+  if (!match && geoResults.length) {
+    match = geoResults[0];
+  }
+
+  return match ? { latitude: match.latitude, longitude: match.longitude } : null;
+}
+
+  currentWeather.textContent = "Weather loading...";
+  try {
+    const match = await geocodeRegionSearch(region);
     if (!match) throw new Error("No weather location");
     weatherLocationCache.set(title, { latitude: match.latitude, longitude: match.longitude });
 
@@ -5101,7 +5155,7 @@ function renderStateOptions() {
   const stateOptions = orderedStates
     .map(
       (state) =>
-        `<option value="${state.abbr}" class="${preloaded.has(state.abbr) ? "preloaded-state-option" : ""}" ${state.abbr === "TX" ? "selected" : ""}>${state.name}${preloaded.has(state.abbr) ? " - counties preloaded" : ""}</option>`,
+        `<option value="${state.abbr}" class="${preloaded.has(state.abbr) ? "preloaded-state-option" : ""}" ${state.abbr === "TX" ? "selected" : ""}>${state.name}</option>`,
     )
     .join("");
   const countryOptions = countries
@@ -5557,25 +5611,7 @@ async function resolveRegionLocation(region) {
   const cachedLocation = weatherLocationCache.get(title);
   if (cachedLocation?.latitude && cachedLocation?.longitude) return cachedLocation;
 
-  const queries = [
-    `${region.name}, ${region.state}`,
-    region.name,
-    region.name.replace(/\s+County$/i, ""),
-  ].filter(Boolean);
-  const geoResults = [];
-
-  for (const query of queries) {
-    const geoResponse = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`,
-    );
-    const geo = await geoResponse.json();
-    geoResults.push(...(geo.results || []));
-    if (geoResults.length) break;
-  }
-
-  const match = geoResults.find((item) =>
-    String(item.admin1 || "").toLowerCase().includes(String(region.state || "").toLowerCase()),
-  ) || geoResults[0];
+  const match = await geocodeRegionSearch(region);
   if (!match) return null;
 
   const location = { latitude: match.latitude, longitude: match.longitude };

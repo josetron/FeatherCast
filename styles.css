@@ -184,7 +184,7 @@ h1 {
 
 .title-map-row {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 16px;
   margin-bottom: 10px;
 }
@@ -275,6 +275,31 @@ h3 {
   font-weight: 600;
   font-style: italic;
   line-height: 1.45;
+}
+
+.lede-tabs {
+  text-align: center;
+  margin: -6px auto 10px; /* Positions it centered and close to the tabs container */
+  padding: 0 16px;
+  color: #4f645d;
+  font-family:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.35;
+  white-space: nowrap; /* Single line on desktop */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+@media (max-width: 990px) {
+  .lede-tabs {
+    white-space: normal; /* Wrap text on tablets and mobile screens */
+    margin: -4px auto 10px;
+    font-size: 1.05rem;
+  }
 }
 
 .header-visual {
@@ -734,6 +759,89 @@ main {
     radial-gradient(circle at 88% 14%, rgba(255, 243, 196, 0.86), transparent 34%),
     linear-gradient(180deg, #fff3c6 0%, #ffe7a6 100%);
   color: #46370f;
+  transition: all 0.38s ease; /* Smooth transition when risk level updates */
+}
+
+/* State-specific color intensity adjustments */
+
+/* Low Signal - pastoral soft green, low intensity */
+.risk-panel.is-low {
+  border-top-color: #8ca05b; /* var(--leaf) */
+  background:
+    radial-gradient(circle at 88% 14%, rgba(238, 244, 233, 0.9), transparent 34%),
+    linear-gradient(180deg, #eef4e9 0%, #dfeadc 100%);
+  color: #24361f;
+}
+.risk-panel.is-low .section-label,
+.risk-panel.is-low h2,
+.risk-panel.is-low .risk-summary {
+  color: #1e351b;
+}
+.risk-panel.is-low .risk-score {
+  border-color: #cbd8c4;
+  background: radial-gradient(circle at 38% 28%, #ffffff, #edf4e8);
+  color: #24361f;
+  transition: all 0.38s ease;
+}
+
+/* Medium Signal - original warm amber / golden yellow */
+.risk-panel.is-medium {
+  border-top-color: var(--sun);
+  background:
+    radial-gradient(circle at 88% 14%, rgba(255, 243, 196, 0.86), transparent 34%),
+    linear-gradient(180deg, #fff3c6 0%, #ffe7a6 100%);
+  color: #46370f;
+}
+.risk-panel.is-medium .section-label,
+.risk-panel.is-medium h2,
+.risk-panel.is-medium .risk-summary {
+  color: #513e11;
+}
+.risk-panel.is-medium .risk-score {
+  border-color: #e5cc99;
+  background: radial-gradient(circle at 38% 28%, #ffffff, #fff2cc);
+  color: #46370f;
+  transition: all 0.38s ease;
+}
+
+/* High Signal - vibrant intense orange */
+.risk-panel.is-high {
+  border-top-color: #e06c3a;
+  background:
+    radial-gradient(circle at 88% 14%, rgba(255, 226, 204, 0.86), transparent 34%),
+    linear-gradient(180deg, #ffe2cc 0%, #ffccaa 100%);
+  color: #59250b;
+}
+.risk-panel.is-high .section-label,
+.risk-panel.is-high h2,
+.risk-panel.is-high .risk-summary {
+  color: #662000;
+}
+.risk-panel.is-high .risk-score {
+  border-color: #f7bfa6;
+  background: radial-gradient(circle at 38% 28%, #ffffff, #ffe5d4);
+  color: #59250b;
+  transition: all 0.38s ease;
+}
+
+/* Extreme Signal - deep, highly intense warning crimson red */
+.risk-panel.is-extreme {
+  border-top-color: var(--berry);
+  background:
+    radial-gradient(circle at 88% 14%, rgba(255, 214, 216, 0.86), transparent 34%),
+    linear-gradient(180deg, #ffd6d8 0%, #fcaeb2 100%);
+  color: #5c181b;
+}
+.risk-panel.is-extreme .section-label,
+.risk-panel.is-extreme h2,
+.risk-panel.is-extreme .risk-summary {
+  color: #6e1114;
+}
+.risk-panel.is-extreme .risk-score {
+  border-color: #f7a6a9;
+  background: radial-gradient(circle at 38% 28%, #ffffff, #ffd6d8);
+  color: #5c181b;
+  transition: all 0.38s ease;
 }
 
 .control-panel {
@@ -822,11 +930,11 @@ main {
   opacity: 1;
 }
 
-#stateSelect option.preloaded-state-option {
+#stateSelect {
   font-weight: 900;
 }
 
-#stateSelect.has-preloaded-state {
+#stateSelect option {
   font-weight: 900;
 }
 
@@ -1185,7 +1293,7 @@ main {
 }
 
 .risk-topline h2 {
-  font-size: clamp(2.35rem, 6vw, 5rem);
+  font-size: clamp(1.4rem, 3.6vw, 3rem);
   color: var(--moss-dark);
 }
 
@@ -2532,6 +2640,12 @@ a:focus-visible {
   width: 276px; /* 15% wider (from 240px) */
 }
 
+.header-location-button {
+  align-self: center; /* Center horizontally in the desktop column */
+  margin: 2px 0;
+  padding: 0 4px;
+}
+
 .header-select-label {
   display: grid;
   gap: 4px;
@@ -2607,6 +2721,11 @@ a:focus-visible {
     flex: 1 1 200px; /* Responsive grid wrapping: side-by-side or stacked */
     width: auto;
     max-width: 100%;
+  }
+  .header-location-button {
+    width: 100%;
+    text-align: center;
+    margin: 6px 0;
   }
 }
 
