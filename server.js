@@ -327,6 +327,98 @@ function parseNominatimSearchLocation(data, countyName, stateName, countryCode) 
   };
 }
 
+const stateFipsByAbbr = {
+  AL: "01", AK: "02", AZ: "04", AR: "05", CA: "06", CO: "08", CT: "09", DE: "10", DC: "11",
+  FL: "12", GA: "13", HI: "15", ID: "16", IL: "17", IN: "18", IA: "19", KS: "20", KY: "21",
+  LA: "22", ME: "23", MD: "24", MA: "25", MI: "26", MN: "27", MS: "28", MO: "29", MT: "30",
+  NE: "31", NV: "32", NH: "33", NJ: "34", NM: "35", NY: "36", NC: "37", ND: "38", OH: "39",
+  OK: "40", OR: "41", PA: "42", RI: "44", SC: "45", SD: "46", TN: "47", TX: "48", UT: "49",
+  VT: "50", VA: "51", WA: "53", WV: "54", WI: "55", WY: "56",
+};
+
+function cleanPlaceName(name, isBaseName = false) {
+  if (isBaseName) return String(name || "").trim();
+  return String(name || "")
+    .replace(/\s+(city|town|village|borough|municipality)$/i, "")
+    .trim();
+}
+
+async function queryTigerJson(url, params) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(params),
+  });
+  if (!response.ok) throw new Error("Census place lookup unavailable.");
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message || "Census place lookup unavailable.");
+  return data;
+}
+
+async function handleCountyCities(requestUrl, response) {
+  const regionCode = String(requestUrl.searchParams.get("region") || "").trim().toUpperCase();
+  const match = regionCode.match(/^US-([A-Z]{2})-(\d{3})$/);
+  if (!match) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Choose a US county first.", cities: [] }));
+    return;
+  }
+
+  const [, stateAbbr, countyFips] = match;
+  const stateFips = stateFipsByAbbr[stateAbbr];
+  if (!stateFips) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Unsupported state.", cities: [] }));
+    return;
+  }
+
+  try {
+    const countyData = await queryTigerJson(
+      "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query",
+      {
+        f: "json",
+        where: `GEOID='${stateFips}${countyFips}'`,
+        outFields: "GEOID,NAME",
+        returnGeometry: "true",
+        outSR: "4326",
+      },
+    );
+    const countyGeometry = countyData.features?.[0]?.geometry;
+    if (!countyGeometry) throw new Error("County boundary not found.");
+
+    const placeData = await queryTigerJson(
+      "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/4/query",
+      {
+        f: "json",
+        geometry: JSON.stringify(countyGeometry),
+        geometryType: "esriGeometryPolygon",
+        inSR: "4326",
+        spatialRel: "esriSpatialRelIntersects",
+        outFields: "BASENAME,NAME,STATE",
+        returnGeometry: "false",
+        orderByFields: "BASENAME",
+      },
+    );
+
+    const cities = [...new Set(
+      (placeData.features || [])
+        .filter((feature) => String(feature.attributes?.STATE || "") === stateFips)
+        .map((feature) =>
+          feature.attributes?.BASENAME
+            ? cleanPlaceName(feature.attributes.BASENAME, true)
+            : cleanPlaceName(feature.attributes?.NAME)
+        )
+        .filter((name) => name && !/\d|^-|,/.test(name)),
+    )].sort((a, b) => a.localeCompare(b));
+
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ cities }));
+  } catch (error) {
+    response.writeHead(502, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: error.message || "Could not load cities.", cities: [] }));
+  }
+}
+
 async function handleHotspotLocation(requestUrl, response) {
   const query = String(requestUrl.searchParams.get("q") || "").trim();
   const cityName = String(requestUrl.searchParams.get("city") || "").trim();
@@ -475,6 +567,10 @@ http
     }
     if (requestUrl.pathname === "/api/location-region") {
       await handleLocationRegion(requestUrl, response);
+      return;
+    }
+    if (requestUrl.pathname === "/api/county-cities") {
+      await handleCountyCities(requestUrl, response);
       return;
     }
     if (requestUrl.pathname === "/api/hotspot-location") {

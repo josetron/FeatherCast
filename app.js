@@ -2243,6 +2243,7 @@ const windMapStatus = document.querySelector("#windMapStatus");
 const frontLine = document.querySelector("#frontLine");
 const hotspotCache = new Map();
 const hotspotListCache = new Map();
+const countyCityCache = new Map();
 const hotspotMoreInfoCache = new Map();
 const preferredHotspotStorageKey = "feathercastPreferredHotspots";
 const regionPhotoCache = new Map();
@@ -2304,6 +2305,7 @@ let activeHotspotStatus = "Using habitat-based fallback until county hotspots lo
 let activeHotspotFilterComplete = false;
 let activeHotspotSearch = null;
 let hotspotSearchRenderId = 0;
+let hotspotCityRequestId = 0;
 let activeRareRegionCode = "";
 let activeRareObservations = [];
 let activeBirdcastMeta = null;
@@ -4239,16 +4241,14 @@ function hotspotCityOptionsForRegion(region) {
   return [...cityNames].sort((a, b) => a.localeCompare(b));
 }
 
-function updateHotspotCityDropdown() {
+function renderHotspotCityOptions(cities, currentValue = "") {
   if (!hotspotCitySelect) return;
+  const cleanCities = [...new Set(cities)]
+    .map((city) => String(city || "").trim())
+    .filter((city) => city && !/\d|^-|,/.test(city))
+    .sort((a, b) => a.localeCompare(b));
 
-  const region = getRegion();
-  const regionCode = region.ebirdCode || "manual";
-  const currentValue = hotspotCitySelect.value;
-  const cities = hotspotCityOptionsForRegion(region);
-  hotspotCitySelect.dataset.regionCode = regionCode;
-
-  if (!cities.length) {
+  if (!cleanCities.length) {
     hotspotCitySelect.innerHTML = `<option value="">Type a city for this county</option>`;
     hotspotCitySelect.disabled = true;
     return;
@@ -4257,9 +4257,52 @@ function updateHotspotCityDropdown() {
   hotspotCitySelect.disabled = false;
   hotspotCitySelect.innerHTML = `
     <option value="">Select a city</option>
-    ${cities.map((city) => `<option value="${htmlAttribute(city)}">${city}</option>`).join("")}
+    ${cleanCities.map((city) => `<option value="${htmlAttribute(city)}">${city}</option>`).join("")}
   `;
-  hotspotCitySelect.value = cities.includes(currentValue) ? currentValue : "";
+  hotspotCitySelect.value = cleanCities.includes(currentValue) ? currentValue : "";
+}
+
+async function updateHotspotCityDropdown() {
+  if (!hotspotCitySelect) return;
+
+  const region = getRegion();
+  const regionCode = region.ebirdCode || "manual";
+  const currentValue = hotspotCitySelect.value;
+  const fallbackCities = hotspotCityOptionsForRegion(region);
+  const requestId = ++hotspotCityRequestId;
+  hotspotCitySelect.dataset.regionCode = regionCode;
+
+  if (!/^US-[A-Z]{2}-\d{3}$/.test(regionCode)) {
+    renderHotspotCityOptions(fallbackCities, currentValue);
+    return;
+  }
+
+  if (countyCityCache.has(regionCode)) {
+    renderHotspotCityOptions(countyCityCache.get(regionCode), currentValue);
+    return;
+  }
+
+  if (fallbackCities.length) {
+    renderHotspotCityOptions(fallbackCities, currentValue);
+  } else {
+    hotspotCitySelect.innerHTML = `<option value="">Loading cities...</option>`;
+    hotspotCitySelect.disabled = true;
+  }
+
+  try {
+    const response = await fetch(`/api/county-cities?region=${encodeURIComponent(regionCode)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "City lookup unavailable.");
+    const cities = Array.isArray(data.cities) ? data.cities : [];
+    const mergedCities = [...new Set([...fallbackCities, ...cities])];
+    countyCityCache.set(regionCode, mergedCities);
+    if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+    renderHotspotCityOptions(mergedCities, currentValue);
+  } catch {
+    countyCityCache.set(regionCode, fallbackCities);
+    if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+    renderHotspotCityOptions(fallbackCities, currentValue);
+  }
 }
 
 async function getCountyHotspotCards(region) {
