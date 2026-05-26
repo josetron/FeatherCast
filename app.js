@@ -4262,6 +4262,151 @@ function renderHotspotCityOptions(cities, currentValue = "") {
   hotspotCitySelect.value = cleanCities.includes(currentValue) ? currentValue : "";
 }
 
+async function fetchCountyCitiesClientSide(regionCode) {
+  const match = regionCode.match(/^US-([A-Z]{2})-(\d{3})$/);
+  if (!match) return [];
+  const [, stateAbbr, countyFips] = match;
+  const stateObj = states.find((s) => s.abbr === stateAbbr);
+  if (!stateObj) return [];
+  const stateFips = stateObj.fips;
+
+  const queryTigerJson = async (url, params) => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(params),
+    });
+    if (!response.ok) throw new Error("Census place lookup unavailable.");
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || "Census place lookup unavailable.");
+    return data;
+  };
+
+  const queryCountyPlaceLayer = async (countyGeometry, stateFips, layerId) => {
+    const placeData = await queryTigerJson(
+      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/${layerId}/query`,
+      {
+        f: "json",
+        geometry: JSON.stringify(countyGeometry),
+        geometryType: "esriGeometryPolygon",
+        inSR: "4326",
+        spatialRel: "esriSpatialRelIntersects",
+        outFields: "BASENAME,NAME,STATE",
+        returnGeometry: "false",
+        orderByFields: "BASENAME",
+      },
+    );
+
+    return (placeData.features || [])
+      .filter((feature) => String(feature.attributes?.STATE || "") === stateFips)
+      .map((feature) => {
+        const basename = feature.attributes?.BASENAME;
+        const name = feature.attributes?.NAME;
+        return basename ? String(basename).trim() : String(name || "").replace(/\s+(city|town|village|borough|municipality)$/i, "").trim();
+      })
+      .filter((name) => name && !/\d|^-|,/.test(name));
+  };
+
+  let countyData = await queryTigerJson(
+    "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query",
+    {
+      f: "json",
+      where: `GEOID='${stateFips}${countyFips}'`,
+      outFields: "GEOID,NAME",
+      returnGeometry: "true",
+      outSR: "4326",
+    },
+  );
+  let countyGeometry = countyData.features?.[0]?.geometry;
+  let is2020 = false;
+  if (!countyGeometry) {
+    countyData = await queryTigerJson(
+      "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/55/query",
+      {
+        f: "json",
+        where: `GEOID='${stateFips}${countyFips}'`,
+        outFields: "GEOID,NAME",
+        returnGeometry: "true",
+        outSR: "4326",
+      },
+    );
+    countyGeometry = countyData.features?.[0]?.geometry;
+    is2020 = true;
+  }
+  if (!countyGeometry) throw new Error("County boundary not found.");
+
+  const [incorporatedPlaces, censusDesignatedPlaces] = await Promise.all([
+    queryCountyPlaceLayer(countyGeometry, stateFips, is2020 ? 25 : 4),
+    queryCountyPlaceLayer(countyGeometry, stateFips, is2020 ? 26 : 5),
+  ]);
+
+  return [...new Set([...incorporatedPlaces, ...censusDesignatedPlaces])]
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function extractSubdivisionsFromHotspots(hotspots) {
+  const subdivisions = new Set();
+  const excludeWords = /\b(AICA|Reserva|Parque|Río|Quebrada|Finca|Vía|Sendero|Carretera|Airport|Aeropuerto|Hotel|Lodge|Trails|Road|Rd|Highway|Woods|Walmart|Pueblo|Laguna|Volcan|Volcán|National|Reserve|Forest|Park|Trail|Sanctuary|Beach|Playa|River|Creek|Lake|Mountain|Valley|Hill|Ridge|Island|Islands|Isla|Islas|Bahía|Bay|Port|Puerto|Station|Estación|Center|Centro|Garden|Jardín|Jardines|Gardens|Zoo|Refugio|Refuge|Biological|Biológica|Biológico|Sector|Entrada|Access|Acceso|Embalse|Presa|Dam|Laguna|Lagunas|Canal|Cascada|Waterfall|Waterfalls|Salto|Termales|Hotsprings|Hotspring|Clubs|Club|Golf|Marina|Resort|Resorts|Campground|Camp|Camping|Point|Punta|Cabo|Cape|Paso|Pass|Canyon|Cañón|Mirador|Overlook|Viewpoint|Peak|Pico|Cerro|Cerros|Loma|Lomas|Mesa|Mesas|Valley|Valle|Valles|Plain|Plains|Sabana|Sabanas|Páramo|Paramo|Ciénaga|Cienaga|Swamp|Marsh|Estero|Mangle|Manglares|Mangrove|Mangroves|Refugio|Refuge|Kms|Km|Kilómetro|Kilometro|No\b|No\.\b|Sector|Frontera|Border|Customs|Aduana|Peaje|Toll|Estación|Station|Plaza|Mall|Shop|Store|Supermercado|Market|Mercado|Iglesia|Church|Catedral|Cathedral|Cementerio|Cemetery|Colegio|School|Universidad|University|Campus|Hospital|Clínica|Clinica|Base|Fort|Fuerte|Castillo|Castle|Ruinas|Ruins|Monumento|Monument|Archaeological|Arqueológico|Arqueologica)\b/i;
+
+  hotspots.forEach((h) => {
+    const name = h.name || h.locName || "";
+    
+    // Pattern 1: Name--Detail
+    if (name.includes("--")) {
+      const part = name.split("--")[0].trim();
+      if (part && part.length > 2 && part.length < 30 && !excludeWords.test(part)) {
+        subdivisions.add(part);
+      }
+    }
+    // Pattern 2: Name, Detail
+    if (name.includes(",")) {
+      const parts = name.split(",");
+      parts.forEach((part) => {
+        const clean = part.trim().replace(/\s*\(.*\)/g, "");
+        if (clean && clean.length > 2 && clean.length < 25 && /^[A-Z]/.test(clean) && !excludeWords.test(clean)) {
+          subdivisions.add(clean);
+        }
+      });
+    }
+    // Pattern 3: Name - Detail
+    if (name.includes(" - ")) {
+      const parts = name.split(" - ");
+      parts.forEach((part) => {
+        const clean = part.trim().replace(/\s*\(.*\)/g, "");
+        if (clean && clean.length > 2 && clean.length < 25 && /^[A-Z]/.test(clean) && !excludeWords.test(clean)) {
+          subdivisions.add(clean);
+        }
+      });
+    }
+  });
+  return [...subdivisions];
+}
+
+async function getInternationalCities(region) {
+  const regionCode = region.ebirdCode;
+  const fallbackCities = hotspotCityOptionsForRegion(region);
+  let subregions = [];
+  try {
+    const list = await fetchEbirdJson(`ref/region/list/subnational2/${regionCode}`, EBIRD_API_TOKEN);
+    if (Array.isArray(list)) {
+      subregions = list.map((item) => item.name);
+    }
+  } catch (e) {
+    console.warn("Could not fetch eBird subregions:", e);
+  }
+
+  let parsedCities = [];
+  try {
+    const hotspots = await getCountyHotspotCards(region);
+    parsedCities = extractSubdivisionsFromHotspots(hotspots);
+  } catch (e) {
+    console.warn("Could not parse hotspots for cities:", e);
+  }
+
+  const merged = [...new Set([...fallbackCities, ...subregions, ...parsedCities])];
+  return merged.sort((a, b) => a.localeCompare(b));
+}
+
 async function updateHotspotCityDropdown() {
   if (!hotspotCitySelect) return;
 
@@ -4271,6 +4416,33 @@ async function updateHotspotCityDropdown() {
   const fallbackCities = hotspotCityOptionsForRegion(region);
   const requestId = ++hotspotCityRequestId;
   hotspotCitySelect.dataset.regionCode = regionCode;
+
+  if (regionCode !== "manual" && !/^US-[A-Z]{2}-\d{3}$/.test(regionCode)) {
+    if (countyCityCache.has(regionCode)) {
+      renderHotspotCityOptions(countyCityCache.get(regionCode), currentValue);
+      return;
+    }
+
+    if (fallbackCities.length) {
+      renderHotspotCityOptions(fallbackCities, currentValue);
+    } else {
+      hotspotCitySelect.innerHTML = `<option value="">Loading cities...</option>`;
+      hotspotCitySelect.disabled = true;
+    }
+
+    try {
+      const cities = await getInternationalCities(region);
+      const mergedCities = [...new Set([...fallbackCities, ...cities])];
+      countyCityCache.set(regionCode, mergedCities);
+      if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+      renderHotspotCityOptions(mergedCities, currentValue);
+    } catch {
+      countyCityCache.set(regionCode, fallbackCities);
+      if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+      renderHotspotCityOptions(fallbackCities, currentValue);
+    }
+    return;
+  }
 
   if (!/^US-[A-Z]{2}-\d{3}$/.test(regionCode)) {
     renderHotspotCityOptions(fallbackCities, currentValue);
@@ -4289,6 +4461,21 @@ async function updateHotspotCityDropdown() {
     hotspotCitySelect.disabled = true;
   }
 
+  if (window.location.protocol === "file:") {
+    try {
+      const cities = await fetchCountyCitiesClientSide(regionCode);
+      const mergedCities = [...new Set([...fallbackCities, ...cities])];
+      countyCityCache.set(regionCode, mergedCities);
+      if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+      renderHotspotCityOptions(mergedCities, currentValue);
+    } catch {
+      countyCityCache.set(regionCode, fallbackCities);
+      if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+      renderHotspotCityOptions(fallbackCities, currentValue);
+    }
+    return;
+  }
+
   try {
     const response = await fetch(`/api/county-cities?region=${encodeURIComponent(regionCode)}`);
     const data = await response.json().catch(() => ({}));
@@ -4299,9 +4486,17 @@ async function updateHotspotCityDropdown() {
     if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
     renderHotspotCityOptions(mergedCities, currentValue);
   } catch {
-    countyCityCache.set(regionCode, fallbackCities);
-    if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
-    renderHotspotCityOptions(fallbackCities, currentValue);
+    try {
+      const cities = await fetchCountyCitiesClientSide(regionCode);
+      const mergedCities = [...new Set([...fallbackCities, ...cities])];
+      countyCityCache.set(regionCode, mergedCities);
+      if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+      renderHotspotCityOptions(mergedCities, currentValue);
+    } catch {
+      countyCityCache.set(regionCode, fallbackCities);
+      if (requestId !== hotspotCityRequestId || getRegion().ebirdCode !== regionCode) return;
+      renderHotspotCityOptions(fallbackCities, currentValue);
+    }
   }
 }
 
@@ -4398,11 +4593,16 @@ async function geocodeHotspotStreet(locationText, region) {
 
 async function geocodeHotspotNominatim(locationText, region) {
   if (!region.state) return null;
+  const isUS = !region.countryCode || region.countryCode === "US";
+  const stateVal = isUS ? (region.state || "") : (region.name || "");
+  const locationQuery = isUS
+    ? `${locationText}, ${region.state || ""}`
+    : `${locationText}, ${region.name || ""}, ${region.state || ""}`;
   const countryCode = String(region.countryCode || "US").toLowerCase();
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
-        q: `${locationText}, ${region.state}`,
+        q: locationQuery,
         format: "json",
         addressdetails: "1",
       }).toString()}`,
@@ -4416,7 +4616,7 @@ async function geocodeHotspotNominatim(locationText, region) {
     const data = await response.json();
     const matches = Array.isArray(data) ? data : [];
     const selectedCounty = normalizeCountyName(region.name);
-    const selectedState = String(region.state || "").toLowerCase();
+    const selectedState = stateVal.toLowerCase();
 
     const match =
       matches.find((item) => {
@@ -4454,13 +4654,17 @@ async function geocodeHotspotNominatim(locationText, region) {
 
 async function geocodeHotspotLocation(locationText, region) {
   const selectedCity = hotspotCitySelect?.value || "";
+  const isUS = !region.countryCode || region.countryCode === "US";
+  const stateVal = isUS ? (region.state || "") : (region.name || "");
+  const countyVal = isUS ? (region.name || "") : selectedCity;
+
   if (window.location.protocol !== "file:") {
     const response = await fetch(
       `/api/hotspot-location?${new URLSearchParams({
         q: locationText,
         city: selectedCity,
-        county: region.name || "",
-        state: region.state || "",
+        county: countyVal,
+        state: stateVal,
         country: region.countryCode || "US",
       }).toString()}`,
     );
