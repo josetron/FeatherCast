@@ -26,6 +26,31 @@ async function queryTigerJson(url, params) {
   return data;
 }
 
+async function queryCountyPlaceLayer(countyGeometry, stateFips, layerId) {
+  const placeData = await queryTigerJson(
+    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/${layerId}/query`,
+    {
+      f: "json",
+      geometry: JSON.stringify(countyGeometry),
+      geometryType: "esriGeometryPolygon",
+      inSR: "4326",
+      spatialRel: "esriSpatialRelIntersects",
+      outFields: "BASENAME,NAME,STATE",
+      returnGeometry: "false",
+      orderByFields: "BASENAME",
+    },
+  );
+
+  return (placeData.features || [])
+    .filter((feature) => String(feature.attributes?.STATE || "") === stateFips)
+    .map((feature) =>
+      feature.attributes?.BASENAME
+        ? cleanPlaceName(feature.attributes.BASENAME, true)
+        : cleanPlaceName(feature.attributes?.NAME)
+    )
+    .filter((name) => name && !/\d|^-|,/.test(name));
+}
+
 export default async function handler(request, response) {
   const regionCode = String(request.query.region || "").trim().toUpperCase();
   const match = regionCode.match(/^US-([A-Z]{2})-(\d{3})$/);
@@ -42,7 +67,7 @@ export default async function handler(request, response) {
   }
 
   try {
-    const countyData = await queryTigerJson(
+    let countyData = await queryTigerJson(
       "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query",
       {
         f: "json",
@@ -52,35 +77,32 @@ export default async function handler(request, response) {
         outSR: "4326",
       },
     );
-    const countyGeometry = countyData.features?.[0]?.geometry;
+    let countyGeometry = countyData.features?.[0]?.geometry;
+    let is2020 = false;
+    if (!countyGeometry) {
+      countyData = await queryTigerJson(
+        "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/55/query",
+        {
+          f: "json",
+          where: `GEOID='${stateFips}${countyFips}'`,
+          outFields: "GEOID,NAME",
+          returnGeometry: "true",
+          outSR: "4326",
+        },
+      );
+      countyGeometry = countyData.features?.[0]?.geometry;
+      is2020 = true;
+    }
     if (!countyGeometry) throw new Error("County boundary not found.");
 
-    const placeData = await queryTigerJson(
-      "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/4/query",
-      {
-        f: "json",
-        geometry: JSON.stringify(countyGeometry),
-        geometryType: "esriGeometryPolygon",
-        inSR: "4326",
-        spatialRel: "esriSpatialRelIntersects",
-        outFields: "BASENAME,NAME,STATE",
-        returnGeometry: "false",
-        orderByFields: "BASENAME",
-      },
-    );
+    const [incorporatedPlaces, censusDesignatedPlaces] = await Promise.all([
+      queryCountyPlaceLayer(countyGeometry, stateFips, is2020 ? 25 : 4),
+      queryCountyPlaceLayer(countyGeometry, stateFips, is2020 ? 26 : 5),
+    ]);
+    const cities = [...new Set([...incorporatedPlaces, ...censusDesignatedPlaces])]
+      .sort((a, b) => a.localeCompare(b));
 
-    const cities = [...new Set(
-      (placeData.features || [])
-        .filter((feature) => String(feature.attributes?.STATE || "") === stateFips)
-        .map((feature) =>
-          feature.attributes?.BASENAME
-            ? cleanPlaceName(feature.attributes.BASENAME, true)
-            : cleanPlaceName(feature.attributes?.NAME)
-        )
-        .filter((name) => name && !/\d|^-|,/.test(name)),
-    )].sort((a, b) => a.localeCompare(b));
-
-    response.status(200).json({ cities });
+    response.status(200).json({ cities, sources: { incorporated: incorporatedPlaces.length, designated: censusDesignatedPlaces.length } });
   } catch (error) {
     response.status(502).json({ error: error.message || "Could not load cities.", cities: [] });
   }
