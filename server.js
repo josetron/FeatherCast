@@ -20,7 +20,7 @@ const contentTypes = {
 function fetchText(url) {
   return new Promise((resolve, reject) => {
     https
-      .get(url, { headers: { "User-Agent": "Mozilla/5.0" } }, (response) => {
+      .get(url, { headers: { "User-Agent": "FeatherCast-App/1.0" } }, (response) => {
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           resolve(fetchText(response.headers.location));
           return;
@@ -225,13 +225,189 @@ function parseLocationRegion(data) {
   const county = data?.result?.geographies?.Counties?.[0];
   const state = stateMap[county?.STATE];
   if (!county || !state) return null;
+  const name = county.NAME || "";
+  const suffix = /\b(County|Parish|Borough|Census Area|Municipality|Municipio)\b/i.test(name) ? "" : " County";
   return {
-    countyName: `${county.NAME} County`,
+    countyName: `${name}${suffix}`,
     countyFips: county.COUNTY,
     stateAbbr: state[0],
     stateName: state[1],
     ebirdCode: `US-${state[0]}-${county.COUNTY}`,
   };
+}
+
+function normalizeCountyName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/\b(county|parish|borough|municipio|city and borough|census area)\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function parseCensusAddressLocation(data, countyName) {
+  const selectedCounty = normalizeCountyName(countyName);
+  const matches = data?.result?.addressMatches || [];
+  const match = matches.find((item) => {
+    const county = item.geographies?.Counties?.[0]?.NAME || "";
+    return !selectedCounty || normalizeCountyName(county) === selectedCounty;
+  }) || matches[0];
+  const coordinates = match?.coordinates;
+  if (!coordinates || !Number.isFinite(Number(coordinates.y)) || !Number.isFinite(Number(coordinates.x))) {
+    return null;
+  }
+  return {
+    label: match.matchedAddress || "",
+    lat: Number(coordinates.y),
+    lng: Number(coordinates.x),
+  };
+}
+
+function parseOpenMeteoLocation(data, query, countyName, stateName, countryCode) {
+  const matches = Array.isArray(data?.results) ? data.results : [];
+  const selectedCounty = normalizeCountyName(countyName);
+  const selectedState = String(stateName || "").toLowerCase();
+  const selectedCountry = String(countryCode || "US").toUpperCase();
+
+  const match =
+    matches.find((item) =>
+      item.country_code === selectedCountry &&
+      String(item.admin1 || "").toLowerCase() === selectedState &&
+      normalizeCountyName(item.admin2 || "") === selectedCounty,
+    ) ||
+    matches.find((item) =>
+      item.country_code === selectedCountry &&
+      String(item.admin1 || "").toLowerCase() === selectedState,
+    ) ||
+    matches.find((item) =>
+      item.country_code === selectedCountry
+    );
+
+  if (!match) return null;
+  return {
+    label: `${match.name}${match.admin1 ? `, ${match.admin1}` : ""}, ${stateName}`,
+    lat: Number(match.latitude),
+    lng: Number(match.longitude),
+  };
+}
+
+function parseNominatimSearchLocation(data, countyName, stateName, countryCode) {
+  const matches = Array.isArray(data) ? data : [];
+  const selectedCounty = normalizeCountyName(countyName);
+  const selectedState = String(stateName || "").toLowerCase();
+  const selectedCountry = String(countryCode || "US").toLowerCase();
+
+  const match =
+    matches.find((item) => {
+      const address = item.address || {};
+      const itemState = String(address.state || "").toLowerCase();
+      const itemCounty = normalizeCountyName(address.county || address.state_district || address.region);
+      const itemCountry = String(address.country_code || "").toLowerCase();
+      return itemCountry === selectedCountry &&
+        (itemState === selectedState || !selectedState) &&
+        (!selectedCounty || itemCounty === selectedCounty);
+    }) ||
+    matches.find((item) => {
+      const address = item.address || {};
+      const itemState = String(address.state || "").toLowerCase();
+      const itemCountry = String(address.country_code || "").toLowerCase();
+      return itemCountry === selectedCountry &&
+        (itemState === selectedState || !selectedState);
+    }) ||
+    matches.find((item) => {
+      const address = item.address || {};
+      const itemCountry = String(address.country_code || "").toLowerCase();
+      return itemCountry === selectedCountry;
+    });
+
+  if (!match) return null;
+  return {
+    label: match.display_name || "",
+    lat: Number(match.lat),
+    lng: Number(match.lon),
+  };
+}
+
+async function handleHotspotLocation(requestUrl, response) {
+  const query = String(requestUrl.searchParams.get("q") || "").trim();
+  const cityName = String(requestUrl.searchParams.get("city") || "").trim();
+  const countyName = String(requestUrl.searchParams.get("county") || "").trim();
+  const stateName = String(requestUrl.searchParams.get("state") || "").trim();
+  const countryCode = String(requestUrl.searchParams.get("country") || "US").trim().toUpperCase();
+
+  if (!query || !countyName || !stateName) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Enter a city or street inside the selected county." }));
+    return;
+  }
+
+  let location = null;
+
+  if (countryCode === "US") {
+    try {
+      const addressUrl = new URL("https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress");
+      addressUrl.search = new URLSearchParams({
+        address: [query, cityName, countyName, stateName].filter(Boolean).join(", "),
+        benchmark: "Public_AR_Current",
+        vintage: "Current_Current",
+        format: "json",
+      }).toString();
+      const addressLocation = parseCensusAddressLocation(JSON.parse(await fetchText(addressUrl.href)), countyName);
+      if (addressLocation) {
+        location = {
+          ...addressLocation,
+          label: addressLocation.label || `${query}, ${countyName}, ${stateName}`,
+          source: "street",
+        };
+      }
+    } catch {
+      // Census geocoder failed or timed out, try fallback.
+    }
+  }
+
+  if (!location) {
+    try {
+      const osmUrl = new URL("https://nominatim.openstreetmap.org/search");
+      osmUrl.search = new URLSearchParams({
+        q: [query, cityName, countyName, stateName].filter(Boolean).join(", "),
+        format: "json",
+        addressdetails: "1",
+      }).toString();
+      const osmData = JSON.parse(await fetchText(osmUrl.href));
+      const osmLocation = parseNominatimSearchLocation(osmData, countyName, stateName, countryCode);
+      if (osmLocation) {
+        location = {
+          ...osmLocation,
+          source: "street",
+        };
+      }
+    } catch {
+      // Nominatim search failed, fallback to city search.
+    }
+  }
+
+  if (location) {
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify(location));
+    return;
+  }
+
+  try {
+    const cityUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
+    cityUrl.search = new URLSearchParams({
+      name: query,
+      count: "10",
+      language: "en",
+      format: "json",
+    }).toString();
+    const cityLocation = parseOpenMeteoLocation(JSON.parse(await fetchText(cityUrl.href)), query, countyName, stateName, countryCode);
+    if (!cityLocation) throw new Error(`Could not find ${query} inside ${countyName}, ${stateName}.`);
+
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ...cityLocation, source: "city" }));
+  } catch (error) {
+    response.writeHead(502, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: error.message || "Could not search that location." }));
+  }
 }
 
 async function handleLocationRegion(requestUrl, response) {
@@ -299,6 +475,10 @@ http
     }
     if (requestUrl.pathname === "/api/location-region") {
       await handleLocationRegion(requestUrl, response);
+      return;
+    }
+    if (requestUrl.pathname === "/api/hotspot-location") {
+      await handleHotspotLocation(requestUrl, response);
       return;
     }
     serveStatic(requestUrl, response);

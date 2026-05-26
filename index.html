@@ -303,8 +303,14 @@
         <section class="hotspot-search-panel" aria-label="Find nearby hotspots">
           <div class="hotspot-search-form">
             <label>
-              <span class="field-title">Search hotspot by location</span>
-              <input id="hotspotLocationInput" type="text" placeholder="City inside the selected county" />
+              <span class="field-title">Choose city</span>
+              <select id="hotspotCitySelect">
+                <option value="">Select a city</option>
+              </select>
+            </label>
+            <label>
+              <span class="field-title">Search hotspot by location (street)</span>
+              <input id="hotspotLocationInput" type="text" placeholder="City or street inside the selected county" />
             </label>
             <div class="hotspot-search-actions">
               <button id="hotspotLocationSearch" type="button">Search</button>
