@@ -3955,10 +3955,10 @@ function checklistOrLocationUrl(obs, fallbackUrl = "") {
   return fallbackUrl;
 }
 
-function hotspotCurrentMonthBirdListUrl(hotspot) {
-  if (hotspot?.locId) return `https://ebird.org/hotspot/${encodeURIComponent(hotspot.locId)}/bird-list?yr=curM`;
+function hotspotCurrentMonthUrl(hotspot) {
+  if (hotspot?.locId) return `https://ebird.org/hotspot/${encodeURIComponent(hotspot.locId)}?yr=curM`;
   const match = String(hotspot?.url || "").match(/https:\/\/ebird\.org\/hotspot\/([^/?#]+)/i);
-  return match ? `https://ebird.org/hotspot/${encodeURIComponent(match[1])}/bird-list?yr=curM` : hotspot?.url || "";
+  return match ? `https://ebird.org/hotspot/${encodeURIComponent(match[1])}?yr=curM` : hotspot?.url || "";
 }
 
 function htmlAttribute(value) {
@@ -4001,6 +4001,18 @@ function isPreferredHotspot(regionCode, hotspot) {
   return readPreferredHotspots().has(preferredHotspotKey(regionCode, hotspot));
 }
 
+function preferredHotspotsForRegion(regionCode, hotspots) {
+  const preferred = readPreferredHotspots();
+  return hotspots.filter((hotspot) => preferred.has(preferredHotspotKey(regionCode, hotspot)));
+}
+
+function mergePreferredHotspots(regionCode, visibleHotspots, preferredCandidates) {
+  const visibleKeys = new Set(visibleHotspots.map(hotspotIdentity));
+  const missingPreferred = preferredHotspotsForRegion(regionCode, preferredCandidates)
+    .filter((hotspot) => !visibleKeys.has(hotspotIdentity(hotspot)));
+  return [...missingPreferred, ...visibleHotspots];
+}
+
 function setPreferredHotspot(regionCode, hotspotKey, shouldPrefer) {
   const preferred = readPreferredHotspots();
   const storageKey = `${regionCode || "manual"}::${hotspotKey}`;
@@ -4031,10 +4043,19 @@ async function renderHotspots(result) {
     hasActiveHotspotData
       ? activeRegionHotspots
       : region.hotspots;
-  const filteredHotspots =
+  const activeFilteredHotspots =
     hasActiveHotspotData && activeHotspotFilterComplete
       ? hotspotSource.filter((hotspot) => hotspot.species?.length || hotspot.recentSpeciesCount)
       : hotspotSource;
+  const preferredCandidates = [
+    ...(region.hotspots || []),
+    ...(hasActiveHotspotData ? activeRegionHotspots : []),
+  ];
+  const filteredHotspots = mergePreferredHotspots(
+    renderRegionCode,
+    activeFilteredHotspots,
+    preferredCandidates,
+  );
 
   if (hasActiveHotspotData && activeHotspotFilterComplete && !filteredHotspots.length) {
     document.querySelector("#hotspotGrid").innerHTML = `
@@ -4077,8 +4098,8 @@ async function renderHotspots(result) {
             <div class="hotspot-title">
               <div class="hotspot-name-row">
                 <h3>${
-                  hotspotCurrentMonthBirdListUrl(hotspot)
-                    ? `<a class="hotspot-bird-list-link" href="${htmlAttribute(hotspotCurrentMonthBirdListUrl(hotspot))}" data-loc-id="${htmlAttribute(hotspot.locId || "")}" target="_blank" rel="noopener noreferrer">${hotspot.name}</a>`
+                  hotspotCurrentMonthUrl(hotspot)
+                    ? `<a class="hotspot-bird-list-link" href="${htmlAttribute(hotspotCurrentMonthUrl(hotspot))}" target="_blank" rel="noopener">${hotspot.name}</a>`
                     : hotspot.name
                 }</h3>
                 <button
@@ -5952,23 +5973,10 @@ function handlePreferredHotspotClick(event) {
   refreshScoredPanels();
 }
 
-function handleHotspotBirdListClick(event) {
-  const link = event.target.closest(".hotspot-bird-list-link");
-  if (!link) return;
-
-  const locId = link.dataset.locId;
-  if (!locId) return;
-
-  event.preventDefault();
-  const url = `https://ebird.org/hotspot/${encodeURIComponent(locId)}/bird-list?yr=curM`;
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 fields.stateSelect.addEventListener("change", loadCountiesForSelectedState);
 fields.regionSelect.addEventListener("change", refreshSelectedCountyData);
 fields.useCurrentLocation?.addEventListener("click", useCurrentLocation);
 document.querySelector("#hotspotGrid")?.addEventListener("click", handlePreferredHotspotClick);
-document.querySelector("#hotspotGrid")?.addEventListener("click", handleHotspotBirdListClick);
 fields.birdsCrossed.addEventListener("input", syncBirdcastDisplaysFromInputs);
 fields.birdsInFlight.addEventListener("input", syncBirdcastDisplaysFromInputs);
 birdSearchInput?.addEventListener("input", updateBirdFinderMatches);
