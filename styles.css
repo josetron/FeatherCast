@@ -74,7 +74,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 42px 0 28px;
+  padding: 42px 0 10px;
 }
 
 .app-header > div:first-child {
@@ -184,13 +184,14 @@ h1 {
 
 .title-map-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 16px;
   margin-bottom: 10px;
 }
 
 .title-copy {
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .title-copy h1 {
@@ -356,7 +357,7 @@ h3 {
 }
 
 main {
-  padding: 10px 0 64px;
+  padding: 0 0 64px;
 }
 
 .hero-grid,
@@ -694,10 +695,20 @@ main {
 
 .front-map-links {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  justify-self: start;
-  margin-top: -2px;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.current-front-map-image {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--soft-shadow);
+  display: block;
 }
 
 .front-map-link {
@@ -2229,15 +2240,30 @@ a:focus-visible {
     padding: 14px;
   }
 
-  .title-map-row {
-    align-items: flex-start;
-  }
+
 
   .header-visual {
     width: 100%;
     min-width: 0;
-    justify-items: start;
+    justify-items: center;
     margin-top: 18px;
+  }
+
+  .header-visual .county-mini-map-link {
+    justify-items: center;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .header-visual .county-mini-map {
+    width: 100%;
+    height: 250px;
+  }
+
+  .header-visual .county-mini-map-legend {
+    width: 100%;
+    text-align: center;
+    padding-right: 0;
   }
 
   .header-visual img {
@@ -2295,12 +2321,7 @@ a:focus-visible {
   }
 
   .title-map-row {
-    display: block;
-  }
-
-  .county-mini-map {
-    width: min(100%, 260px);
-    margin: 0 0 14px;
+    /* Keep flex layout from 768px media query */
   }
 
   .risk-panel,
@@ -2356,7 +2377,7 @@ a:focus-visible {
   position: sticky;
   top: 10px;
   z-index: 999;
-  margin: 12px auto 24px;
+  margin: 0 auto 20px;
   padding: 6px;
   background: rgba(255, 253, 247, 0.85);
   backdrop-filter: blur(12px) saturate(120%);
@@ -2500,3 +2521,92 @@ a:focus-visible {
     display: none; /* Hide icons on very small screens to fit text */
   }
 }
+
+/* Header Selects & Minimap adjustments */
+.header-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-left: 36px; /* Moved closer to the title (to the left) */
+  flex-shrink: 0;
+  width: 276px; /* 15% wider (from 240px) */
+}
+
+.header-select-label {
+  display: grid;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 250, 0.74);
+  border: 1px solid rgba(213, 223, 207, 0.92);
+  border-radius: 12px;
+  width: 100%;
+  box-shadow: var(--soft-shadow);
+}
+
+.header-select-label select {
+  min-height: 38px;
+  font-size: 0.92rem;
+  border-color: rgba(31, 76, 54, 0.22);
+}
+
+.header-select-label .header-field-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--moss);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.header-select-label .field-note {
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+/* Adjust mini map sizing when in header-visual */
+.header-visual .county-mini-map-link {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  text-decoration: none;
+  width: 100%;
+  max-width: 440px; /* Map container size on desktop */
+}
+
+.header-visual .county-mini-map {
+  width: 100%;
+  height: 280px; /* Larger map to fill desktop empty space beautifully */
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  border-color: rgba(63, 118, 87, 0.32);
+}
+
+.header-visual .county-mini-map-legend {
+  width: 100%;
+  font-size: 0.8rem;
+  text-align: right;
+  padding-right: 8px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* Responsive adjustments for header select group */
+@media (max-width: 768px) {
+  .title-map-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .header-select-group {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .header-select-label {
+    flex: 1 1 200px; /* Responsive grid wrapping: side-by-side or stacked */
+    width: auto;
+    max-width: 100%;
+  }
+}
+

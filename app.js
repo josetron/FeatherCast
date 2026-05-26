@@ -3489,9 +3489,15 @@ async function setCountyMiniWeatherMap(regionName, latitude, longitude, current 
   const condition = current ? weatherCodeLabel(current.weather_code) : "Weather loading";
   const weatherSummary = `${weatherIcon(current?.weather_code)} ${temp} · ${condition} · ${rain} · ${wind}`;
 
-  countyMiniMap.title = `${regionName} weather map. Click for full forecast.`;
-  countyMiniMap.setAttribute("aria-label", `${regionName} weather map: ${temp}, ${condition}, ${wind}, ${rain}. Open full forecast.`);
+  countyMiniMap.title = `${regionName} weather map. Click to view on Google Maps.`;
+  countyMiniMap.setAttribute("aria-label", `${regionName} weather map: ${temp}, ${condition}, ${wind}, ${rain}. Click to view on Google Maps.`);
   if (countyMiniMapLegend) countyMiniMapLegend.textContent = weatherSummary;
+
+  if (countyMiniMapLink) {
+    countyMiniMapLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+    countyMiniMapLink.title = `Click to view ${regionName} on Google Maps`;
+    countyMiniMapLink.setAttribute("aria-label", `Open Google Maps for ${regionName} at coordinates ${lat}, ${lon}`);
+  }
 
   if (!window.L) {
     countyMiniMap.textContent = "";
@@ -3516,6 +3522,7 @@ async function setCountyMiniWeatherMap(regionName, latitude, longitude, current 
     }).addTo(countyWeatherMap);
   } else {
     countyWeatherMap.setView([lat, lon], 8);
+    countyWeatherMap.invalidateSize();
   }
 
   if (!countyWeatherMarker) {

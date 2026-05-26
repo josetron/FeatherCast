@@ -22,31 +22,43 @@
           <div class="title-copy">
             <h1>FeatherCast</h1>
             <p class="season-subtitle">Spring Migration</p>
+            <p id="reportTimestamp" class="report-timestamp">Report time pending</p>
+            <p id="appUpdatedTimestamp" class="app-updated-timestamp">App updated time pending</p>
           </div>
-          <a
-            id="countyMiniMapLink"
-            class="county-mini-map-link"
-            href="https://www.google.com/search?q=weather+forecast"
-            aria-label="Open selected county weather forecast"
-          >
-            <div
-              id="countyMiniMap"
-              class="county-mini-map"
-              title="Selected county weather map"
-              role="img"
-              aria-label="Selected county weather map"
-            ></div>
-            <span id="countyMiniMapLegend" class="county-mini-map-legend">Weather loading...</span>
-          </a>
+          <div class="header-select-group">
+            <label class="header-select-label">
+              <span class="header-field-title">US State/Country</span>
+              <select id="stateSelect"></select>
+            </label>
+            <label class="header-select-label">
+              <span class="header-field-title">County / region</span>
+              <select id="regionSelect"></select>
+              <span id="countyStatus" class="field-note">Loading counties...</span>
+            </label>
+          </div>
         </div>
-        <p id="reportTimestamp" class="report-timestamp">Report time pending</p>
-        <p id="appUpdatedTimestamp" class="app-updated-timestamp">App updated time pending</p>
         <p class="lede">
           A field dashboard for spotting when migration, weather, and local reports point to birds concentration in the selected area.
         </p>
       </div>
       <div class="header-visual">
-        <img src="assets/Birds%20Illustration.png" alt="Illustration of several migratory birds flying over a coastal meadow" />
+        <a
+          id="countyMiniMapLink"
+          class="county-mini-map-link"
+          href="https://www.google.com/search?q=weather+forecast"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Open selected county weather forecast"
+        >
+          <div
+            id="countyMiniMap"
+            class="county-mini-map"
+            title="Selected county weather map"
+            role="img"
+            aria-label="Selected county weather map"
+          ></div>
+          <span id="countyMiniMapLegend" class="county-mini-map-legend">Weather loading...</span>
+        </a>
       </div>
     </header>
 
@@ -152,15 +164,6 @@
               <button id="useCurrentLocation" class="current-location-button" type="button">(use current location)</button>
             </div>
             <form id="signalForm" class="signal-form">
-              <label>
-                <span class="field-title">State/Country</span>
-                <select id="stateSelect"></select>
-              </label>
-              <label>
-                <span class="field-title">County / region</span>
-                <select id="regionSelect"></select>
-                <span id="countyStatus" class="field-note">Loading counties...</span>
-              </label>
               <label id="manualCountyLabel" class="is-hidden">
                 Manual county name
                 <input id="manualCountyName" type="text" value="My County" />
@@ -230,15 +233,13 @@
                 <input id="frontPassage" class="visually-hidden" type="text" value="" placeholder="Optional timing, if a front is nearby" />
               </label>
               <span id="frontMapLinks" class="front-map-links is-hidden">
-                <a
+                <img
                   id="frontMapLink"
-                  class="front-map-link"
-                  href="https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Current front map
-                </a>
+                  class="current-front-map-image"
+                  src="https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif"
+                  alt="Current Front Map"
+                  loading="lazy"
+                />
                 <a
                   class="front-map-link"
                   href="https://www.wpc.ncep.noaa.gov/basicwx/day0-7loop.html?utm_source=chatgpt.com"
