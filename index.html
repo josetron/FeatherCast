@@ -299,6 +299,24 @@
         </section>
 
         <section id="hotspotGrid" class="hotspot-grid" aria-label="Ranked birding hotspots"></section>
+
+        <section class="hotspot-search-panel" aria-label="Find nearby hotspots">
+          <div class="hotspot-search-form">
+            <label>
+              <span class="field-title">Search hotspot by location</span>
+              <input id="hotspotLocationInput" type="text" placeholder="City inside the selected county" />
+            </label>
+            <div class="hotspot-search-actions">
+              <button id="hotspotLocationSearch" type="button">Search</button>
+              <button id="hotspotUseCurrentLocation" type="button">Use my current location</button>
+              <button id="hotspotClearSearch" class="is-hidden" type="button">Clear</button>
+            </div>
+          </div>
+          <p id="hotspotSearchStatus" class="field-note">Enter a city in the selected county or use your current location to show the closest 4 hotspots.</p>
+        </section>
+
+        <section id="hotspotSearchGrid" class="hotspot-grid hotspot-search-grid" aria-label="Nearby hotspot search results"></section>
+        <button id="hotspotShowMore" class="hotspot-show-more is-hidden" type="button">Show more</button>
       </div>
 
       <!-- TAB 3: BIRDS -->

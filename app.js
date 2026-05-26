@@ -2173,6 +2173,7 @@ const windMap = document.querySelector("#windMap");
 const windMapStatus = document.querySelector("#windMapStatus");
 const frontLine = document.querySelector("#frontLine");
 const hotspotCache = new Map();
+const hotspotListCache = new Map();
 const hotspotMoreInfoCache = new Map();
 const preferredHotspotStorageKey = "feathercastPreferredHotspots";
 const regionPhotoCache = new Map();
@@ -2227,8 +2228,11 @@ let countyWeatherRadarLayer = null;
 let countyWeatherRadarPath = "";
 let activeHotspotRegionCode = "";
 let activeRegionHotspots = [];
+let activeRegionAllHotspots = [];
 let activeHotspotStatus = "Using habitat-based fallback until county hotspots load.";
 let activeHotspotFilterComplete = false;
+let activeHotspotSearch = null;
+let hotspotSearchRenderId = 0;
 let activeRareRegionCode = "";
 let activeRareObservations = [];
 let activeBirdcastMeta = null;
@@ -2259,6 +2263,13 @@ const birdMatchLabel = document.querySelector("#birdMatchLabel");
 const birdMatchSelect = document.querySelector("#birdMatchSelect");
 const birdFinderResult = document.querySelector("#birdFinderResult");
 const birdFinderNearby = document.querySelector("#birdFinderNearby");
+const hotspotLocationInput = document.querySelector("#hotspotLocationInput");
+const hotspotLocationSearch = document.querySelector("#hotspotLocationSearch");
+const hotspotUseCurrentLocation = document.querySelector("#hotspotUseCurrentLocation");
+const hotspotClearSearch = document.querySelector("#hotspotClearSearch");
+const hotspotSearchStatus = document.querySelector("#hotspotSearchStatus");
+const hotspotSearchGrid = document.querySelector("#hotspotSearchGrid");
+const hotspotShowMore = document.querySelector("#hotspotShowMore");
 const feedbackForm = document.querySelector("#feedbackForm");
 const feedbackName = document.querySelector("#feedbackName");
 const feedbackEmail = document.querySelector("#feedbackEmail");
@@ -3096,6 +3107,8 @@ function ebirdHotspotToCard(hotspot, index, regionName) {
     mapsUrl,
     moreInfoUrl: hotspotMoreInfoUrl(name),
     locId: hotspot.locId || "",
+    lat: Number(hotspot.lat),
+    lng: Number(hotspot.lng),
     recentSpeciesCount: null,
     recentMigrants: [],
   };
@@ -4107,10 +4120,315 @@ function updatePreferredHotspotButton(button, isPreferred) {
   button.innerHTML = isPreferred ? "&#9829;" : "&#9825;";
 }
 
+function milesBetween(start, end) {
+  const lat1 = Number(start?.lat);
+  const lon1 = Number(start?.lng ?? start?.lon);
+  const lat2 = Number(end?.lat);
+  const lon2 = Number(end?.lng ?? end?.lon);
+  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return Number.POSITIVE_INFINITY;
+
+  const toRadians = (degrees) => degrees * Math.PI / 180;
+  const radiusMiles = 3958.8;
+  const deltaLat = toRadians(lat2 - lat1);
+  const deltaLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(deltaLon / 2) ** 2;
+
+  return radiusMiles * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistanceMiles(distance) {
+  if (!Number.isFinite(distance)) return "";
+  return distance < 10 ? `${distance.toFixed(1)} mi away` : `${Math.round(distance)} mi away`;
+}
+
+function clearHotspotSearchStatus() {
+  if (!hotspotSearchStatus) return;
+  hotspotSearchStatus.textContent =
+    "Enter a city in the selected county or use your current location to show the closest 4 hotspots.";
+}
+
+function setHotspotSearchLoading(isLoading) {
+  [hotspotLocationSearch, hotspotUseCurrentLocation].forEach((button) => {
+    if (button) button.disabled = isLoading;
+  });
+}
+
+async function getCountyHotspotCards(region) {
+  const regionCode = region?.ebirdCode;
+  const regionName = region?.state ? `${region.name}, ${region.state}` : region?.name || "Selected County";
+  if (!regionCode) return region?.hotspots || genericHotspots;
+  if (activeHotspotRegionCode === regionCode && activeRegionAllHotspots.length) return activeRegionAllHotspots;
+  if (hotspotListCache.has(regionCode)) return hotspotListCache.get(regionCode);
+
+  const hotspots = await fetchEbirdJson(`ref/hotspot/${regionCode}?fmt=json`, EBIRD_API_TOKEN);
+  const cards = hotspots
+    .map((hotspot, index) => ebirdHotspotToCard(hotspot, index, regionName))
+    .filter((hotspot) => Number.isFinite(Number(hotspot.lat)) && Number.isFinite(Number(hotspot.lng)));
+  hotspotListCache.set(regionCode, cards);
+  return cards;
+}
+
+async function geocodeHotspotCity(city, region) {
+  const regionName = region.state ? `${region.name}, ${region.state}` : region.name;
+  const response = await fetch(
+    `https://geocoding-api.open-meteo.com/v1/search?${new URLSearchParams({
+      name: city,
+      count: "10",
+      language: "en",
+      format: "json",
+    }).toString()}`,
+  );
+  if (!response.ok) throw new Error("Location search is unavailable right now.");
+  const data = await response.json();
+  const matches = Array.isArray(data.results) ? data.results : [];
+  const selectedCounty = normalizeCountyName(region.name);
+  const selectedState = String(region.state || "").toLowerCase();
+  const match =
+    matches.find((item) =>
+      item.country_code === "US" &&
+      String(item.admin1 || "").toLowerCase() === selectedState &&
+      normalizeCountyName(item.admin2 || "") === selectedCounty,
+    ) ||
+    matches.find((item) =>
+      item.country_code === "US" &&
+      String(item.admin1 || "").toLowerCase() === selectedState,
+    );
+  if (!match) throw new Error(`Could not find ${city} inside ${regionName}.`);
+
+  return {
+    label: `${match.name}, ${regionName}`,
+    lat: Number(match.latitude),
+    lng: Number(match.longitude),
+  };
+}
+
+async function showClosestHotspots(origin, label) {
+  const region = getRegion();
+  const renderRegionCode = region.ebirdCode;
+  const regionName = region.state ? `${region.name}, ${region.state}` : region.name;
+  const allHotspots = await getCountyHotspotCards(region);
+  const closest = allHotspots
+    .map((hotspot) => {
+      const distance = milesBetween(origin, hotspot);
+      return {
+        ...hotspot,
+        distanceMiles: distance,
+        distanceLabel: formatDistanceMiles(distance),
+        recentStatus: hotspot.recentStatus || "Open eBird for latest reports",
+        observationWindowLabel: hotspot.observationWindowLabel || "Recent reports",
+      };
+    })
+    .filter((hotspot) => Number.isFinite(hotspot.distanceMiles))
+    .sort((a, b) => a.distanceMiles - b.distanceMiles);
+
+  if (!closest.length) throw new Error(`No mappable eBird hotspots were found for ${regionName}.`);
+
+  activeHotspotSearch = { label, hotspots: closest, regionCode: renderRegionCode, visibleCount: 4 };
+  if (hotspotClearSearch) hotspotClearSearch.classList.remove("is-hidden");
+  if (hotspotSearchStatus) {
+    hotspotSearchStatus.textContent =
+      `Showing the closest ${Math.min(4, closest.length)} of ${closest.length} hotspots to ${label}.`;
+  }
+  refreshScoredPanels();
+}
+
+async function runHotspotCitySearch() {
+  const city = hotspotLocationInput?.value.trim();
+  if (!city) {
+    if (hotspotSearchStatus) hotspotSearchStatus.textContent = "Enter a city inside the selected county first.";
+    return;
+  }
+
+  const region = getRegion();
+  setHotspotSearchLoading(true);
+  if (hotspotSearchStatus) hotspotSearchStatus.textContent = `Finding hotspots near ${city}...`;
+
+  try {
+    const origin = await geocodeHotspotCity(city, region);
+    try {
+      const matchedCounty = await fetchCountyFromCoordinates(origin.lat, origin.lng);
+      if (
+        region.ebirdCode &&
+        matchedCounty.ebirdCode &&
+        matchedCounty.ebirdCode !== region.ebirdCode
+      ) {
+        throw new Error(`${city} appears to be outside ${region.name}, ${region.state}.`);
+      }
+    } catch (error) {
+      if (/outside/.test(error.message)) throw error;
+    }
+    await showClosestHotspots(origin, origin.label);
+  } catch (error) {
+    if (hotspotSearchStatus) hotspotSearchStatus.textContent = error.message || "Could not search nearby hotspots.";
+  } finally {
+    setHotspotSearchLoading(false);
+  }
+}
+
+async function runHotspotCurrentLocationSearch() {
+  setHotspotSearchLoading(true);
+  if (hotspotSearchStatus) hotspotSearchStatus.textContent = "Finding closest hotspots from your current location...";
+
+  try {
+    const position = await getCurrentPosition();
+    const { latitude, longitude } = position.coords;
+    const region = getRegion();
+    try {
+      const matchedCounty = await fetchCountyFromCoordinates(latitude, longitude);
+      if (
+        region.ebirdCode &&
+        matchedCounty.ebirdCode &&
+        matchedCounty.ebirdCode !== region.ebirdCode
+      ) {
+        throw new Error(`Your current location appears to be outside ${region.name}, ${region.state}.`);
+      }
+    } catch (error) {
+      if (/outside/.test(error.message)) throw error;
+    }
+    await showClosestHotspots({ lat: latitude, lng: longitude }, "your current location");
+  } catch (error) {
+    if (hotspotSearchStatus) hotspotSearchStatus.textContent = error.message || "Could not use current location.";
+  } finally {
+    setHotspotSearchLoading(false);
+  }
+}
+
+function clearHotspotSearch() {
+  activeHotspotSearch = null;
+  if (hotspotClearSearch) hotspotClearSearch.classList.add("is-hidden");
+  if (hotspotSearchGrid) hotspotSearchGrid.innerHTML = "";
+  if (hotspotShowMore) hotspotShowMore.classList.add("is-hidden");
+  clearHotspotSearchStatus();
+  refreshScoredPanels();
+}
+
+async function showMoreHotspotSearchResults() {
+  if (!activeHotspotSearch) return;
+  activeHotspotSearch.visibleCount = Math.min(
+    activeHotspotSearch.hotspots.length,
+    (activeHotspotSearch.visibleCount || 4) + 4,
+  );
+  const region = getRegion();
+  const signals = readSignals();
+  const result = scoreSignals(signals);
+  const regionName = region.state ? `${region.name}, ${region.state}` : region.name;
+  await renderActiveHotspotSearch(result, regionName, region.ebirdCode);
+}
+
+async function renderHotspotCards(hotspots, renderRegionCode) {
+  const cards = hotspots.map(async (hotspot, index) => {
+    const speciesRows = hotspot.species?.length
+      ? await Promise.all(hotspot.species.map((species) => localSpeciesPhotoRow(species)))
+      : [];
+    return `
+      <article class="hotspot-card" data-hotspot-key="${hotspot.renderKey}">
+        <div class="rank">${index + 1}</div>
+        <div>
+          <div class="hotspot-title">
+            <div class="hotspot-name-row">
+              <h3>${
+                hotspotCurrentMonthUrl(hotspot)
+                  ? `<a class="hotspot-bird-list-link" href="${htmlAttribute(hotspotCurrentMonthUrl(hotspot))}" target="_blank" rel="noopener">${hotspot.name}</a>`
+                  : hotspot.name
+              }</h3>
+              <button
+                class="preferred-hotspot-button ${hotspot.isPreferred ? "is-preferred" : ""}"
+                type="button"
+                data-region-code="${htmlAttribute(renderRegionCode)}"
+                data-hotspot-key="${htmlAttribute(hotspot.preferredKey)}"
+                aria-pressed="${hotspot.isPreferred ? "true" : "false"}"
+                aria-label="${hotspot.isPreferred ? "Remove preferred hotspot" : "Save as preferred hotspot"}"
+              >${hotspot.isPreferred ? "&#9829;" : "&#9825;"}</button>
+            </div>
+            <span>${hotspot.score}</span>
+          </div>
+          <p class="hotspot-links">
+            ${hotspot.mapsUrl ? `<a class="maps-link" href="${hotspot.mapsUrl}" target="_blank" rel="noreferrer">Google Maps</a>` : ""}
+            ${hotspot.url ? `<a class="hotspot-direct-link" href="${hotspot.url}" target="_blank" rel="noreferrer">eBird Hotspot</a>` : ""}
+            ${hotspot.moreInfoUrl ? `<a class="hotspot-more-info-link" href="${hotspot.moreInfoUrl}" target="_blank" rel="noreferrer">More info...</a>` : ""}
+            ${!hotspot.mapsUrl && !hotspot.url ? hotspot.signal : ""}
+          </p>
+          ${hotspot.distanceLabel ? `<p class="hotspot-distance">Distance: ${hotspot.distanceLabel}</p>` : ""}
+          ${
+            hotspot.recentStatus
+              ? `<p class="hotspot-recent">${hotspot.observationWindowLabel || "Recent reports"}: ${hotspot.recentStatus}</p>`
+              : hotspot.recentSpeciesCount === null || hotspot.recentSpeciesCount === undefined
+              ? `<p class="hotspot-recent">${hotspot.observationWindowLabel || "Recent reports"}: checking species count</p>`
+              : `<p class="hotspot-recent">${hotspot.observationWindowLabel || "Recent reports"}: ${hotspot.recentSpeciesCount} species reported</p>`
+          }
+          ${
+            hotspot.recentMigrants?.length
+              ? `<p class="hotspot-migrants">${hotspot.signalLabel || "Signals reported"}: ${hotspot.recentMigrants.join(", ")}</p>`
+              : hotspot.recentStatus
+                ? `<p class="hotspot-migrants">Signals reported: check current eBird lists for this hotspot</p>`
+                : hotspot.recentSpeciesCount === null || hotspot.recentSpeciesCount === undefined
+                ? `<p class="hotspot-migrants">Signals reported: checking recent reports</p>`
+                : `<p class="hotspot-migrants">Signals reported: none detected in recent hotspot pull</p>`
+          }
+          <p class="habitat">${hotspot.habitat}</p>
+          ${
+            hotspot.species?.length
+              ? `<div class="species-list local-migrant-photo-list hotspot-migrant-photo-list">${speciesRows.join("")}</div>`
+              : ""
+          }
+        </div>
+      </article>
+    `;
+  });
+
+  return Promise.all(cards);
+}
+
+async function renderActiveHotspotSearch(result, regionName, renderRegionCode) {
+  if (!hotspotSearchGrid) return;
+  const searchRenderId = ++hotspotSearchRenderId;
+
+  if (!activeHotspotSearch || activeHotspotSearch.regionCode !== renderRegionCode) {
+    hotspotSearchGrid.innerHTML = "";
+    if (hotspotShowMore) hotspotShowMore.classList.add("is-hidden");
+    return;
+  }
+
+  const visibleCount = activeHotspotSearch.visibleCount || 4;
+  const visibleHotspots = activeHotspotSearch.hotspots.slice(0, visibleCount);
+  const scoredSearchHotspots = visibleHotspots
+    .map((hotspot, index) => ({
+      ...hotspot,
+      renderKey: `hotspot-search-${index}-${String(hotspot.locId || hotspot.name || "location").replace(/[^a-z0-9]+/gi, "-")}`,
+      preferredKey: hotspotIdentity(hotspot),
+      isPreferred: isPreferredHotspot(renderRegionCode, hotspot),
+      score: hotspotScore(hotspot.base, result.score, index),
+    }));
+  const renderedSearchCards = await renderHotspotCards(scoredSearchHotspots, renderRegionCode);
+  if (searchRenderId !== hotspotSearchRenderId) return;
+  if (getRegion().ebirdCode !== renderRegionCode) return;
+
+  hotspotSearchGrid.innerHTML = renderedSearchCards.join("");
+  if (hotspotSearchStatus) {
+    hotspotSearchStatus.textContent =
+      `Showing the closest ${visibleHotspots.length} of ${activeHotspotSearch.hotspots.length} hotspots to ${activeHotspotSearch.label}.`;
+  }
+  if (hotspotShowMore) {
+    hotspotShowMore.classList.toggle("is-hidden", visibleHotspots.length >= activeHotspotSearch.hotspots.length);
+  }
+  enrichHotspotMoreInfoLinks(scoredSearchHotspots, regionName, renderRegionCode);
+}
+
 async function renderHotspots(result) {
   const region = getRegion();
   const renderRegionCode = region.ebirdCode;
   const regionName = region.state ? `${region.name}, ${region.state}` : region.name;
+
+  if (activeHotspotSearch && activeHotspotSearch.regionCode !== renderRegionCode) {
+    activeHotspotSearch = null;
+    if (hotspotClearSearch) hotspotClearSearch.classList.add("is-hidden");
+    if (hotspotSearchGrid) hotspotSearchGrid.innerHTML = "";
+    if (hotspotShowMore) hotspotShowMore.classList.add("is-hidden");
+    clearHotspotSearchStatus();
+  }
+
   const hasActiveHotspotData = activeHotspotRegionCode === region.ebirdCode;
   const hotspotSource =
     hasActiveHotspotData
@@ -4147,6 +4465,7 @@ async function renderHotspots(result) {
     `;
     document.querySelector("#hotspotIntro").textContent =
       `Filtered ${regionName} locations to places with recent eBird activity in the selected window.`;
+    await renderActiveHotspotSearch(result, regionName, renderRegionCode);
     return;
   }
 
@@ -4160,61 +4479,7 @@ async function renderHotspots(result) {
     }))
     .sort((a, b) => Number(b.isPreferred) - Number(a.isPreferred) || b.score - a.score);
 
-  const cards = scoredHotspots.map(async (hotspot, index) => {
-      const speciesRows = hotspot.species?.length
-        ? await Promise.all(hotspot.species.map((species) => localSpeciesPhotoRow(species)))
-        : [];
-      return `
-        <article class="hotspot-card" data-hotspot-key="${hotspot.renderKey}">
-          <div class="rank">${index + 1}</div>
-          <div>
-            <div class="hotspot-title">
-              <div class="hotspot-name-row">
-                <h3>${
-                  hotspotCurrentMonthUrl(hotspot)
-                    ? `<a class="hotspot-bird-list-link" href="${htmlAttribute(hotspotCurrentMonthUrl(hotspot))}" target="_blank" rel="noopener">${hotspot.name}</a>`
-                    : hotspot.name
-                }</h3>
-                <button
-                  class="preferred-hotspot-button ${hotspot.isPreferred ? "is-preferred" : ""}"
-                  type="button"
-                  data-region-code="${htmlAttribute(renderRegionCode)}"
-                  data-hotspot-key="${htmlAttribute(hotspot.preferredKey)}"
-                  aria-pressed="${hotspot.isPreferred ? "true" : "false"}"
-                  aria-label="${hotspot.isPreferred ? "Remove preferred hotspot" : "Save as preferred hotspot"}"
-                >${hotspot.isPreferred ? "&#9829;" : "&#9825;"}</button>
-              </div>
-              <span>${hotspot.score}</span>
-            </div>
-            <p class="hotspot-links">
-              ${hotspot.mapsUrl ? `<a class="maps-link" href="${hotspot.mapsUrl}" target="_blank" rel="noreferrer">Google Maps</a>` : ""}
-              ${hotspot.url ? `<a class="hotspot-direct-link" href="${hotspot.url}" target="_blank" rel="noreferrer">eBird Hotspot</a>` : ""}
-              ${hotspot.moreInfoUrl ? `<a class="hotspot-more-info-link" href="${hotspot.moreInfoUrl}" target="_blank" rel="noreferrer">More info...</a>` : ""}
-              ${!hotspot.mapsUrl && !hotspot.url ? hotspot.signal : ""}
-            </p>
-            ${
-              hotspot.recentSpeciesCount === null || hotspot.recentSpeciesCount === undefined
-                ? `<p class="hotspot-recent">${hotspot.observationWindowLabel || "Recent reports"}: checking species count</p>`
-                : `<p class="hotspot-recent">${hotspot.observationWindowLabel || "Recent reports"}: ${hotspot.recentSpeciesCount} species reported</p>`
-            }
-            ${
-              hotspot.recentMigrants?.length
-                ? `<p class="hotspot-migrants">${hotspot.signalLabel || "Signals reported"}: ${hotspot.recentMigrants.join(", ")}</p>`
-                : hotspot.recentSpeciesCount === null || hotspot.recentSpeciesCount === undefined
-                  ? `<p class="hotspot-migrants">Signals reported: checking recent reports</p>`
-                  : `<p class="hotspot-migrants">Signals reported: none detected in recent hotspot pull</p>`
-            }
-            <p class="habitat">${hotspot.habitat}</p>
-            ${
-              hotspot.species?.length
-                ? `<div class="species-list local-migrant-photo-list hotspot-migrant-photo-list">${speciesRows.join("")}</div>`
-                : ""
-            }
-          </div>
-        </article>
-      `;
-    });
-  const renderedCards = await Promise.all(cards);
+  const renderedCards = await renderHotspotCards(scoredHotspots, renderRegionCode);
   if (getRegion().ebirdCode !== renderRegionCode) return;
 
   document.querySelector("#hotspotGrid").innerHTML = renderedCards.join("");
@@ -4225,6 +4490,7 @@ async function renderHotspots(result) {
         : `Loaded ${activeRegionHotspots.length} county-specific eBird hotspots for ${regionName}; checking recent migrant reports.`
       : `${activeHotspotStatus} Ranked for ${regionName} using water, riparian cover, migrant habitat, and current sample signals.`;
   enrichHotspotMoreInfoLinks(scoredHotspots, regionName, renderRegionCode);
+  await renderActiveHotspotSearch(result, regionName, renderRegionCode);
 }
 
 function renderRegion() {
@@ -5326,6 +5592,7 @@ async function refreshHotspotsForSelectedRegion() {
   if (!regionCode) {
     activeHotspotRegionCode = "";
     activeRegionHotspots = [];
+    activeRegionAllHotspots = [];
     activeHotspotStatus = "No eBird region code is available for this county yet.";
     updateDashboard();
     return;
@@ -5334,6 +5601,7 @@ async function refreshHotspotsForSelectedRegion() {
   if (hotspotCache.has(regionCode)) {
     activeHotspotRegionCode = regionCode;
     activeRegionHotspots = hotspotCache.get(regionCode);
+    activeRegionAllHotspots = hotspotListCache.get(regionCode) || activeRegionHotspots;
     activeHotspotFilterComplete = true;
     activeHotspotStatus = `Loaded cached eBird hotspots for ${regionName}.`;
     updateDashboard();
@@ -5342,6 +5610,7 @@ async function refreshHotspotsForSelectedRegion() {
 
   activeHotspotRegionCode = "";
   activeRegionHotspots = [];
+  activeRegionAllHotspots = [];
   activeHotspotFilterComplete = false;
   activeHotspotStatus = `Loading eBird hotspots for ${regionName}...`;
   updateDashboard();
@@ -5351,6 +5620,10 @@ async function refreshHotspotsForSelectedRegion() {
       fetchEbirdJson(`ref/hotspot/${regionCode}?fmt=json`, EBIRD_API_TOKEN),
       fetchHotspotObservationWindow(regionCode),
     ]);
+    const allHotspotCards = hotspots
+      .map((hotspot, index) => ebirdHotspotToCard(hotspot, index, regionName))
+      .filter((hotspot) => Number.isFinite(Number(hotspot.lat)) && Number.isFinite(Number(hotspot.lng)));
+    hotspotListCache.set(regionCode, allHotspotCards);
     let selectedHotspotWindow = hotspotWindow;
     let recentObservations = selectedHotspotWindow.observations;
     const notableObservations = await fetchEbirdJson(
@@ -5429,6 +5702,7 @@ async function refreshHotspotsForSelectedRegion() {
     hotspotCache.set(regionCode, cards);
     activeHotspotRegionCode = regionCode;
     activeRegionHotspots = cards;
+    activeRegionAllHotspots = allHotspotCards;
     activeHotspotFilterComplete = true;
     activeHotspotStatus = cards.length
       ? `${selectedHotspotWindow.emptyMessage ? `${selectedHotspotWindow.emptyMessage} ` : ""}Loaded recently active eBird locations for ${regionName} from ${selectedHotspotWindow.statusDetail}.`
@@ -5436,6 +5710,7 @@ async function refreshHotspotsForSelectedRegion() {
   } catch (error) {
     activeHotspotRegionCode = "";
     activeRegionHotspots = [];
+    activeRegionAllHotspots = [];
     activeHotspotFilterComplete = false;
     activeHotspotStatus = `Could not load eBird hotspots for ${regionName} (${error.message}); showing habitat-based fallback.`;
   }
@@ -6050,6 +6325,17 @@ fields.stateSelect.addEventListener("change", loadCountiesForSelectedState);
 fields.regionSelect.addEventListener("change", refreshSelectedCountyData);
 fields.useCurrentLocation?.addEventListener("click", useCurrentLocation);
 document.querySelector("#hotspotGrid")?.addEventListener("click", handlePreferredHotspotClick);
+hotspotSearchGrid?.addEventListener("click", handlePreferredHotspotClick);
+hotspotLocationSearch?.addEventListener("click", runHotspotCitySearch);
+hotspotUseCurrentLocation?.addEventListener("click", runHotspotCurrentLocationSearch);
+hotspotClearSearch?.addEventListener("click", clearHotspotSearch);
+hotspotShowMore?.addEventListener("click", showMoreHotspotSearchResults);
+hotspotLocationInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    runHotspotCitySearch();
+  }
+});
 fields.birdsCrossed.addEventListener("input", syncBirdcastDisplaysFromInputs);
 fields.birdsInFlight.addEventListener("input", syncBirdcastDisplaysFromInputs);
 birdSearchInput?.addEventListener("input", updateBirdFinderMatches);
@@ -6110,4 +6396,3 @@ function setupTabNavigation() {
 }
 
 setupTabNavigation();
-

@@ -414,6 +414,74 @@ main {
     linear-gradient(180deg, #eef8fb 0%, #e2f1f6 100%);
 }
 
+.hotspot-search-panel {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 14px 18px;
+  border: 1px solid rgba(213, 223, 207, 0.92);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(246, 250, 242, 0.92));
+  box-shadow: var(--soft-shadow);
+}
+
+.hotspot-search-form {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.hotspot-search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.hotspot-search-actions button {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(31, 76, 54, 0.16);
+  border-radius: 10px;
+  background: #edf4e8;
+  color: var(--moss-dark);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.hotspot-search-actions button:hover,
+.hotspot-search-actions button:focus-visible {
+  background: #dfead9;
+}
+
+.hotspot-search-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.hotspot-show-more {
+  min-height: 42px;
+  justify-self: center;
+  margin: -2px 0 18px;
+  padding: 8px 16px;
+  border: 1px solid rgba(31, 76, 54, 0.16);
+  border-radius: 10px;
+  background: #edf4e8;
+  color: var(--moss-dark);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.hotspot-show-more:hover,
+.hotspot-show-more:focus-visible {
+  background: #dfead9;
+}
+
 .bird-finder-form {
   display: grid;
   grid-template-columns: minmax(220px, 0.75fr) minmax(220px, 0.8fr);
@@ -1828,9 +1896,16 @@ a:focus-visible {
 .hotspot-area,
 .habitat,
 .hotspot-recent,
+.hotspot-distance,
 .hotspot-migrants {
   font-size: 0.78rem;
   line-height: 1.2;
+}
+
+.hotspot-distance {
+  margin-bottom: 4px;
+  color: #1f4c36;
+  font-weight: 900;
 }
 
 .hotspot-recent {
@@ -2182,6 +2257,7 @@ a:focus-visible {
   .two-column,
   .insight-band,
   .hotspot-grid,
+  .hotspot-search-form,
   .guide-intro,
   .guide-grid,
   .bird-finder-results,
@@ -2424,4 +2500,3 @@ a:focus-visible {
     display: none; /* Hide icons on very small screens to fit text */
   }
 }
-
