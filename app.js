@@ -41,6 +41,62 @@ const regions = {
       },
     ],
   },
+  "US-TX-039": {
+    name: "Brazoria County",
+    state: "Texas",
+    birdcastCode: "US-TX-039",
+    ebirdCode: "US-TX-039",
+    hotspots: [
+      {
+        name: "Quintana Neotropic Bird Sanctuary",
+        area: "Quintana",
+        habitat: "Coastal woodlot, migratory trap, water",
+        base: 92,
+        signal: "Premier coastal fallout trap. Outstanding first stop during spring migration.",
+        species: ["Painted Bunting", "Indigo Bunting", "Yellow Warbler"],
+      },
+      {
+        name: "Brazoria National Wildlife Refuge",
+        area: "Brazoria",
+        habitat: "Wetlands, marshes, coastal prairie",
+        base: 86,
+        signal: "Excellent for checking waterbirds and tired migrants working the salt cedar and willow lines.",
+        species: ["Orchard Oriole", "Least Flycatcher", "Nashville Warbler"],
+      },
+      {
+        name: "Gulf Coast Bird Observatory",
+        area: "Lake Jackson",
+        habitat: "Woodland trails, gardens, wetlands",
+        base: 84,
+        signal: "Great sheltered feeding area and watering holes for active migrant flocks.",
+        species: ["Summer Tanager", "Rose-breasted Grosbeak", "Baltimore Oriole"],
+      },
+    ],
+  },
+  "US-TX-157": {
+    name: "Fort Bend County",
+    state: "Texas",
+    birdcastCode: "US-TX-157",
+    ebirdCode: "US-TX-157",
+    hotspots: [
+      {
+        name: "Brazos Bend State Park",
+        area: "Needville",
+        habitat: "Wetlands, lakes, bottomland hardwood forest",
+        base: 90,
+        signal: "Huge diversity of habitats. Riparian bottomlands concentrate high counts of warblers and vireos.",
+        species: ["Prothonotary Warbler", "Yellow-throated Vireo", "Summer Tanager"],
+      },
+      {
+        name: "Cullinan Park",
+        area: "Sugar Land",
+        habitat: "Lakes, mixed forest, Oyster Creek corridor",
+        base: 85,
+        signal: "Superb oak canopy and riparian edges attract hungry migrant warblers and buntings.",
+        species: ["Nashville Warbler", "Indigo Bunting", "Baltimore Oriole"],
+      },
+    ],
+  },
   "US-TX-453": {
     name: "Travis County",
     state: "Texas",
@@ -547,6 +603,8 @@ const historicalMigrantCountyLeaders = {
   ],
   TX: [
     "US-TX-209",
+    "US-TX-039",
+    "US-TX-157",
     "US-TX-201",
     "US-TX-167",
     "US-TX-061",
@@ -5046,8 +5104,8 @@ async function fetchNearbyBirdSightings(region, bird, countyRecent = []) {
           : null,
       }))
       .sort((a, b) =>
-        (a.distanceMiles ?? Number.POSITIVE_INFINITY) - (b.distanceMiles ?? Number.POSITIVE_INFINITY) ||
-        String(b.obsDt || "").localeCompare(String(a.obsDt || "")),
+        String(b.obsDt || "").localeCompare(String(a.obsDt || "")) ||
+        (a.distanceMiles ?? Number.POSITIVE_INFINITY) - (b.distanceMiles ?? Number.POSITIVE_INFINITY),
       )
       .slice(0, 5);
   const fetchRegionSightings = async (regionCode, maxResults = 100) => {
@@ -6009,3 +6067,47 @@ updateReportTimestamp();
 updateAppTimestamp();
 loadCountiesForSelectedState();
 loadLatestBirdcastMap();
+
+function setupTabNavigation() {
+  const tabButtons = document.querySelectorAll(".tab-btn");
+  const tabPanels = document.querySelectorAll(".tab-panel");
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetTab = btn.getAttribute("data-tab");
+
+      tabButtons.forEach((b) => {
+        if (b === btn) {
+          b.classList.add("active");
+          b.setAttribute("aria-selected", "true");
+        } else {
+          b.classList.remove("active");
+          b.setAttribute("aria-selected", "false");
+        }
+      });
+
+      tabPanels.forEach((panel) => {
+        if (panel.id === `tab-${targetTab}`) {
+          panel.classList.add("active");
+        } else {
+          panel.classList.remove("active");
+        }
+      });
+
+      // Smart smooth scroll back to tab navigation bar if scrolled past it
+      const tabsContainer = document.querySelector(".tabs-container");
+      if (tabsContainer) {
+        const rect = tabsContainer.getBoundingClientRect();
+        if (rect.top < 0) {
+          window.scrollTo({
+            top: window.scrollY + rect.top - 10,
+            behavior: "smooth",
+          });
+        }
+      }
+    });
+  });
+}
+
+setupTabNavigation();
+

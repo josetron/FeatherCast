@@ -367,7 +367,7 @@ main {
 }
 
 .two-column {
-  grid-template-columns: minmax(320px, 1.08fr) minmax(180px, 0.5fr) minmax(320px, 0.92fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .control-panel {
@@ -2274,3 +2274,154 @@ a:focus-visible {
     align-items: flex-start;
   }
 }
+
+/* --- TABS SYSTEM --- */
+.tabs-container {
+  position: sticky;
+  top: 10px;
+  z-index: 999;
+  margin: 12px auto 24px;
+  padding: 6px;
+  background: rgba(255, 253, 247, 0.85);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(213, 223, 207, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(25, 48, 38, 0.06);
+  transition: all 0.3s ease;
+}
+
+.tabs-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border-radius: 11px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.tab-icon {
+  opacity: 0.7;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: var(--moss);
+  background: rgba(63, 118, 87, 0.07);
+}
+
+.tab-btn:hover .tab-icon {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.tab-btn.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--moss), var(--moss-dark));
+  box-shadow: 0 4px 14px rgba(31, 76, 54, 0.25);
+}
+
+.tab-btn.active .tab-icon {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.tab-panel {
+  display: none;
+  opacity: 0;
+}
+
+.tab-panel.active {
+  display: block;
+  opacity: 1;
+  animation: tabFadeIn 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom layout grids for tab contents */
+.birds-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.resources-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 18px;
+  margin-bottom: 18px;
+  align-items: start;
+}
+
+.resources-grid .feedback-panel {
+  margin-top: 0; /* Align with the adjacent panel */
+}
+
+/* Responsive updates for tabs */
+@media (max-width: 880px) {
+  .tabs-container {
+    top: 6px;
+    border-radius: 12px;
+    padding: 4px;
+    margin: 8px auto 18px;
+  }
+  
+  .tab-btn {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .tab-icon {
+    width: 15px;
+    height: 15px;
+  }
+  
+  .birds-grid,
+  .resources-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs-nav {
+    gap: 4px;
+  }
+  
+  .tab-btn {
+    padding: 8px 6px;
+    font-size: 0.76rem;
+  }
+  
+  .tab-icon {
+    display: none; /* Hide icons on very small screens to fit text */
+  }
+}
+
