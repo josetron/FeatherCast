@@ -169,7 +169,7 @@ h1 {
   max-width: 690px;
   font-family:
     "Aptos Narrow", "Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif;
-  font-size: clamp(1.76rem, 4.7vw, 3.38rem);
+  font-size: clamp(1.5rem, 4vw, 2.8rem);
   font-weight: 850;
   font-stretch: condensed;
   line-height: 0.96;
@@ -2215,7 +2215,7 @@ a:focus-visible {
   }
 
   h1 {
-    font-size: clamp(2.5rem, 18vw, 4.4rem);
+    font-size: clamp(2.0rem, 14vw, 3.5rem);
   }
 
   .title-map-row {
