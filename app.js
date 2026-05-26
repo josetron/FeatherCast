@@ -3976,6 +3976,15 @@ function hotspotIdentity(hotspot) {
     .replace(/^-|-$/g, "");
 }
 
+function hotspotNameIdentity(hotspot) {
+  return String(hotspot?.name || hotspot?.locName || "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\b(private access|restricted access)\b/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function preferredHotspotKey(regionCode, hotspot) {
   return `${regionCode || "manual"}::${hotspotIdentity(hotspot)}`;
 }
@@ -3998,7 +4007,9 @@ function writePreferredHotspots(preferred) {
 }
 
 function isPreferredHotspot(regionCode, hotspot) {
-  return readPreferredHotspots().has(preferredHotspotKey(regionCode, hotspot));
+  const preferred = readPreferredHotspots();
+  return preferred.has(preferredHotspotKey(regionCode, hotspot)) ||
+    preferred.has(`${regionCode || "manual"}::${hotspotNameIdentity(hotspot)}`);
 }
 
 function preferredHotspotsForRegion(regionCode, hotspots) {
@@ -4008,8 +4019,12 @@ function preferredHotspotsForRegion(regionCode, hotspots) {
 
 function mergePreferredHotspots(regionCode, visibleHotspots, preferredCandidates) {
   const visibleKeys = new Set(visibleHotspots.map(hotspotIdentity));
+  const visibleNameKeys = new Set(visibleHotspots.map(hotspotNameIdentity).filter(Boolean));
   const missingPreferred = preferredHotspotsForRegion(regionCode, preferredCandidates)
-    .filter((hotspot) => !visibleKeys.has(hotspotIdentity(hotspot)));
+    .filter((hotspot) => {
+      const nameKey = hotspotNameIdentity(hotspot);
+      return !visibleKeys.has(hotspotIdentity(hotspot)) && (!nameKey || !visibleNameKeys.has(nameKey));
+    });
   return [...missingPreferred, ...visibleHotspots];
 }
 
