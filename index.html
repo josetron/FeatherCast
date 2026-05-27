@@ -113,18 +113,21 @@
         </p>
         <section class="hero-grid" aria-label="Current fallout summary">
           <article class="risk-panel">
-            <div class="risk-topline">
-              <div>
-                <p id="currentSignalLabel" class="section-label">Current Signal</p>
-                <h2 id="riskLabel">Calculating</h2>
+            <div class="risk-header-group">
+              <div class="risk-topline">
+                <div>
+                  <p id="currentSignalLabel" class="section-label">Current Signal</p>
+                  <h2 id="riskLabel">Calculating</h2>
+                </div>
+                <div class="risk-score" aria-label="Fallout score">
+                  <span id="riskScore">0</span>
+                  <small>/100</small>
+                </div>
               </div>
-              <div class="risk-score" aria-label="Fallout score">
-                <span id="riskScore">0</span>
-                <small>/100</small>
+              <img id="riskBird" class="risk-bird" src="assets/HAPPYBIRDFAV.png" alt="Signal bird" />
+              <div class="meter" aria-hidden="true">
+                <div id="meterFill" class="meter-fill"></div>
               </div>
-            </div>
-            <div class="meter" aria-hidden="true">
-              <div id="meterFill" class="meter-fill"></div>
             </div>
             <p id="riskSummary" class="risk-summary"></p>
             <div id="reasonList" class="reason-list"></div>

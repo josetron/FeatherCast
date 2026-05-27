@@ -972,6 +972,31 @@ main {
   overflow: hidden;
 }
 
+.risk-header-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.risk-bird {
+  position: absolute;
+  bottom: 16px; /* Stands directly on top of the meter bar */
+  right: 135px; /* Positioned to the left of the score circle on desktop */
+  width: 90px;
+  height: auto;
+  z-index: 10;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 560px) {
+  .risk-bird {
+    right: 16px; /* Move to the right side since the score circle is on the left on mobile */
+    width: 75px;
+  }
+}
+
 .risk-panel .section-label,
 .risk-panel h2,
 .risk-panel .risk-summary {
@@ -1018,6 +1043,20 @@ main {
 
 #stateSelect option {
   font-weight: 900;
+  color: var(--ink);
+}
+
+#stateSelect optgroup {
+  color: var(--berry); /* different color for "Countries" title */
+  font-weight: 800;
+  font-style: normal;
+  background-color: var(--paper);
+}
+
+#stateSelect optgroup option {
+  color: var(--river); /* different color for the countries per se */
+  font-weight: 900;
+  background-color: var(--paper);
 }
 
 .label-hint {

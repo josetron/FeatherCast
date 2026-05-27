@@ -3209,6 +3209,21 @@ function renderRisk(result) {
     .map((reason) => `<p>${reason}</p>`)
     .join("");
 
+  const riskBird = document.querySelector("#riskBird");
+  if (riskBird) {
+    const score = Number(result.score || 0);
+    if (score < 30) {
+      riskBird.src = "assets/BADBIRDFAV.png";
+      riskBird.alt = "Low signal bird";
+    } else if (score < 60) {
+      riskBird.src = "assets/SOSOBIRDFAV.png";
+      riskBird.alt = "Moderate signal bird";
+    } else {
+      riskBird.src = "assets/HAPPYBIRDFAV.png";
+      riskBird.alt = "High signal bird";
+    }
+  }
+
   // Update background and border intensity class dynamically
   const riskPanel = document.querySelector(".risk-panel");
   if (riskPanel) {
