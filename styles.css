@@ -277,10 +277,28 @@ h3 {
   line-height: 1.45;
 }
 
+.lede-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: -6px auto 10px;
+  width: min(1180px, calc(100% - 32px));
+  position: relative;
+}
+
+.lede-bird-image {
+  width: 72px;
+  height: auto;
+  flex-shrink: 0;
+  margin-bottom: -15px; /* Overlap tabs container */
+  position: relative;
+  z-index: 1000;
+}
+
 .lede-tabs {
-  text-align: center;
-  margin: -6px auto 10px; /* Positions it centered and close to the tabs container */
-  padding: 0 16px;
+  margin: 0;
+  padding: 0;
   color: #4f645d;
   font-family:
     "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
@@ -291,14 +309,27 @@ h3 {
   white-space: nowrap; /* Single line on desktop */
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
 }
 
 @media (max-width: 990px) {
   .lede-tabs {
     white-space: normal; /* Wrap text on tablets and mobile screens */
-    margin: -4px auto 10px;
     font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .lede-container {
+    flex-direction: column;
+    gap: 6px;
+    margin: 6px auto 12px;
+  }
+  .lede-bird-image {
+    width: 54px;
+    margin-bottom: 0;
+  }
+  .lede-tabs {
+    text-align: center;
   }
 }
 
