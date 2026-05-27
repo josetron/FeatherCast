@@ -2296,6 +2296,9 @@ let countyWeatherMap = null;
 let countyWeatherMarker = null;
 let countyWeatherRadarLayer = null;
 let countyWeatherRadarPath = "";
+const countyMiniMapZoom = 8;
+const countyMiniMapLayer = "radar";
+let activeCountyMiniMapContext = null;
 let activeHotspotRegionCode = "";
 let activeRegionHotspots = [];
 let activeRegionAllHotspots = [];
@@ -3494,6 +3497,23 @@ async function latestRainViewerRadarPath() {
   }
 }
 
+function rainViewerRadarMapUrl(latitude, longitude, zoom = countyMiniMapZoom) {
+  return `https://www.rainviewer.com/map.html?loc=${latitude},${longitude},${zoom}&layer=${countyMiniMapLayer}&sm=0`;
+}
+
+function applyCountyMiniMapLink(regionName, latitude, longitude) {
+  if (!countyMiniMapLink) return false;
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+
+  countyMiniMapLink.href = rainViewerRadarMapUrl(lat, lon);
+  countyMiniMapLink.title = `Click to view ${regionName} radar map on RainViewer`;
+  countyMiniMapLink.setAttribute("aria-label", `Open RainViewer radar layer for ${regionName} at coordinates ${lat}, ${lon}`);
+  activeCountyMiniMapContext = { regionName, latitude: lat, longitude: lon, layer: countyMiniMapLayer, zoom: countyMiniMapZoom };
+  return true;
+}
+
 async function setCountyMiniWeatherMap(regionName, latitude, longitude, current = null) {
   if (!countyMiniMap) return;
   const lat = Number(latitude);
@@ -3505,15 +3525,11 @@ async function setCountyMiniWeatherMap(regionName, latitude, longitude, current 
   const condition = current ? weatherCodeLabel(current.weather_code) : "Weather loading";
   const weatherSummary = `${weatherIcon(current?.weather_code)} ${temp} · ${condition} · ${rain} · ${wind}`;
 
-  countyMiniMap.title = `${regionName} weather map. Click to view on Google Maps.`;
-  countyMiniMap.setAttribute("aria-label", `${regionName} weather map: ${temp}, ${condition}, ${wind}, ${rain}. Click to view on Google Maps.`);
+  countyMiniMap.title = `${regionName} weather map. Click to view on RainViewer.`;
+  countyMiniMap.setAttribute("aria-label", `${regionName} weather map: ${temp}, ${condition}, ${wind}, ${rain}. Click to view on RainViewer.`);
   if (countyMiniMapLegend) countyMiniMapLegend.textContent = weatherSummary;
 
-  if (countyMiniMapLink) {
-    countyMiniMapLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-    countyMiniMapLink.title = `Click to view ${regionName} on Google Maps`;
-    countyMiniMapLink.setAttribute("aria-label", `Open Google Maps for ${regionName} at coordinates ${lat}, ${lon}`);
-  }
+  applyCountyMiniMapLink(regionName, lat, lon);
 
   if (!window.L) {
     countyMiniMap.textContent = "";
@@ -3531,13 +3547,13 @@ async function setCountyMiniWeatherMap(regionName, latitude, longitude, current 
       boxZoom: false,
       zoomControl: false,
       tap: false,
-    }).setView([lat, lon], 8);
+    }).setView([lat, lon], countyMiniMapZoom);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 12,
       minZoom: 5,
     }).addTo(countyWeatherMap);
   } else {
-    countyWeatherMap.setView([lat, lon], 8);
+    countyWeatherMap.setView([lat, lon], countyMiniMapZoom);
     countyWeatherMap.invalidateSize();
   }
 
@@ -5041,6 +5057,7 @@ function renderRegion() {
   const region = getRegion();
   updateHotspotCityDropdown();
   const fullName = region.state ? `${region.name}, ${region.state}` : region.name;
+  const weatherTitle = wikipediaTitleForRegion(region);
   const birdcastUrl = region.birdcastCode
     ? `https://dashboard.birdcast.org/region/${region.birdcastCode}`
     : "https://dashboard.birdcast.org/";
@@ -5060,8 +5077,21 @@ function renderRegion() {
     countyMiniMap.setAttribute("aria-label", `${fullName} weather map. Open full forecast.`);
   }
   if (countyMiniMapLink) {
-    countyMiniMapLink.href = weatherUrl;
-    countyMiniMapLink.setAttribute("aria-label", `Open full weather forecast for ${fullName}`);
+    const cachedLocation = weatherTitle ? weatherLocationCache.get(weatherTitle) : null;
+    const activeLinkMatches =
+      activeCountyMiniMapContext?.regionName === weatherTitle ||
+      activeCountyMiniMapContext?.regionName === fullName;
+    const keptRadarLink = activeLinkMatches
+      ? applyCountyMiniMapLink(fullName, activeCountyMiniMapContext.latitude, activeCountyMiniMapContext.longitude)
+      : cachedLocation?.latitude && cachedLocation?.longitude
+        ? applyCountyMiniMapLink(fullName, cachedLocation.latitude, cachedLocation.longitude)
+        : false;
+
+    if (!keptRadarLink) {
+      countyMiniMapLink.href = weatherUrl;
+      countyMiniMapLink.removeAttribute("title");
+      countyMiniMapLink.setAttribute("aria-label", `Open full weather forecast for ${fullName}`);
+    }
   }
   const hasMatchingBirdcastMeta = activeBirdcastMeta?.regionCode === region.birdcastCode;
   if (birdsCrossedCaption) {

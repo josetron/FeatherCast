@@ -204,6 +204,19 @@ h1 {
   flex: 0 0 auto;
   color: inherit;
   text-decoration: none;
+  position: relative;
+}
+
+.county-mini-map-link::before {
+  content: "";
+  position: absolute;
+  top: 17%;
+  left: 22%;
+  width: 58%;
+  aspect-ratio: 2.4 / 1;
+  background: url("assets/Left birds illustration.png") center / contain no-repeat;
+  pointer-events: none;
+  z-index: 410;
 }
 
 .county-mini-map {
@@ -291,13 +304,35 @@ h3 {
   width: 72px;
   height: auto;
   flex-shrink: 0;
-  margin-bottom: -15px; /* Overlap tabs container */
+  margin-bottom: -15px;
   position: relative;
   z-index: 1000;
 }
 
+.lede-bird-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.lede-bird-link:focus-visible {
+  outline: 3px solid #fbbc04;
+  outline-offset: 5px;
+  border-radius: 999px;
+}
+
+.header-bird-link {
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.header-bird-image {
+  display: block;
+  margin-bottom: 0;
+}
+
 .lede-tabs {
-  margin: 0;
+  margin: 0 auto 12px;
   padding: 0;
   color: #4f645d;
   font-family:
@@ -309,6 +344,11 @@ h3 {
   white-space: nowrap; /* Single line on desktop */
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.dashboard-lede {
+  max-width: min(960px, calc(100% - 24px));
+  text-align: center;
 }
 
 @media (max-width: 990px) {
@@ -2514,22 +2554,23 @@ a:focus-visible {
 /* --- TABS SYSTEM --- */
 .tabs-container {
   position: sticky;
-  top: 10px;
+  top: 0;
   z-index: 999;
-  margin: 0 auto 20px;
-  padding: 6px;
+  width: min(1180px, calc(100% - 32px));
+  margin: -8px auto 12px;
+  padding: 4px;
   background: rgba(255, 253, 247, 0.85);
   backdrop-filter: blur(12px) saturate(120%);
   -webkit-backdrop-filter: blur(12px) saturate(120%);
   border: 1px solid rgba(213, 223, 207, 0.9);
-  border-radius: 16px;
+  border-radius: 12px;
   box-shadow: 0 10px 30px rgba(25, 48, 38, 0.06);
   transition: all 0.3s ease;
 }
 
 .tabs-nav {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tab-btn {
@@ -2537,22 +2578,25 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 18px;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 13px;
   border: none;
   background: transparent;
   color: var(--muted);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.86rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   cursor: pointer;
-  border-radius: 11px;
+  border-radius: 9px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
 }
 
 .tab-icon {
+  width: 15px;
+  height: 15px;
   opacity: 0.7;
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
@@ -2623,21 +2667,21 @@ a:focus-visible {
 /* Responsive updates for tabs */
 @media (max-width: 880px) {
   .tabs-container {
-    top: 6px;
-    border-radius: 12px;
-    padding: 4px;
-    margin: 8px auto 18px;
+    border-radius: 10px;
+    padding: 3px;
+    margin: -4px auto 12px;
   }
   
   .tab-btn {
-    padding: 8px 10px;
-    font-size: 0.85rem;
+    min-height: 30px;
+    padding: 6px 8px;
+    font-size: 0.78rem;
     gap: 4px;
   }
   
   .tab-icon {
-    width: 15px;
-    height: 15px;
+    width: 13px;
+    height: 13px;
   }
   
   .birds-grid,
@@ -2652,8 +2696,9 @@ a:focus-visible {
   }
   
   .tab-btn {
-    padding: 8px 6px;
-    font-size: 0.76rem;
+    min-height: 28px;
+    padding: 5px 5px;
+    font-size: 0.72rem;
   }
   
   .tab-icon {
@@ -2759,4 +2804,3 @@ a:focus-visible {
     margin: 6px 0;
   }
 }
-
