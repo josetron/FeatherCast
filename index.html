@@ -24,6 +24,7 @@
             <p class="season-subtitle">Spring Migration</p>
             <p id="reportTimestamp" class="report-timestamp">Report time pending</p>
             <p id="appUpdatedTimestamp" class="app-updated-timestamp">App updated time pending</p>
+            <button id="useCurrentLocation" class="current-location-button header-location-button" type="button">(use current location)</button>
             <a
               class="lede-bird-link header-bird-link"
               href="https://500px.com/p/josetron/galleries/bird-of-the-world"
@@ -39,7 +40,6 @@
               <span class="header-field-title">US State/Country</span>
               <select id="stateSelect"></select>
             </label>
-            <button id="useCurrentLocation" class="current-location-button header-location-button" type="button">(use current location)</button>
             <label class="header-select-label">
               <span class="header-field-title">County / region</span>
               <select id="regionSelect"></select>
@@ -68,6 +68,93 @@
         </a>
       </div>
     </header>
+    <div class="header-bird-sun-group">
+      <div class="sun-periods-inline" id="sunPeriodsInline">
+        <svg width="0" height="0" style="position: absolute; overflow: hidden;" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad-golden-hour-am" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#d39e2e" />
+              <stop offset="100%" stop-color="#f5d061" />
+            </linearGradient>
+            <linearGradient id="grad-sunrise" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#c94b4b" />
+              <stop offset="100%" stop-color="#ffb75e" />
+            </linearGradient>
+            <linearGradient id="grad-daytime" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff8c00" />
+              <stop offset="100%" stop-color="#ffdf00" />
+            </linearGradient>
+            <linearGradient id="grad-golden-hour-pm" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#d35400" />
+              <stop offset="100%" stop-color="#f1c40f" />
+            </linearGradient>
+            <linearGradient id="grad-sunset" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#8e44ad" />
+              <stop offset="50%" stop-color="#c0392b" />
+              <stop offset="100%" stop-color="#d35400" />
+            </linearGradient>
+            <linearGradient id="grad-blue-hour" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1a2a6c" />
+              <stop offset="100%" stop-color="#b21f1f" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-golden-hour-am" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="5" fill="url(#grad-golden-hour-am)" stroke="none" />
+            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="url(#grad-golden-hour-am)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Golden Hour (AM)</span>
+          <span class="sun-time" id="time-golden-hour-am">6:02 AM - 7:02 AM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-sunrise" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 18a6 6 0 0 0 6-6H6a6 6 0 0 0 6 6z" fill="url(#grad-sunrise)" stroke="none" />
+            <path d="M12 2v3M5.22 5.22l2.12 2.12M18.78 5.22l-2.12 2.12M2 18h20" stroke="url(#grad-sunrise)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Sunrise</span>
+          <span class="sun-time" id="time-sunrise">6:32 AM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-daytime" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="6" fill="url(#grad-daytime)" stroke="none" />
+            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="url(#grad-daytime)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Daytime</span>
+          <span class="sun-time" id="time-daytime">7:02 AM - 7:55 PM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-golden-hour-pm" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="11" r="5" fill="url(#grad-golden-hour-pm)" stroke="none" />
+            <path d="M12 2v2M12 18v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 11h2M20 11h2M4.22 17.78l1.42-1.42M18.36 4.64l1.42-1.42" stroke="url(#grad-golden-hour-pm)" stroke-width="2" stroke-linecap="round" fill="none" />
+            <path d="M4 22h16" stroke="url(#grad-golden-hour-pm)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Golden Hour (PM)</span>
+          <span class="sun-time" id="time-golden-hour-pm">7:55 PM - 8:55 PM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-sunset" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 16a5 5 0 0 0 5-5H7a5 5 0 0 0 5 5z" fill="url(#grad-sunset)" stroke="none" />
+            <path d="M2 20h20M2 16h20M12 2v3M6.22 6.22l1.42 1.42M17.78 6.22l-1.42 1.42" stroke="url(#grad-sunset)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Sunset</span>
+          <span class="sun-time" id="time-sunset">8:25 PM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-blue-hour" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="url(#grad-blue-hour)" stroke="none" />
+          </svg>
+          <span class="sun-label">Blue Hour</span>
+          <span class="sun-time" id="time-blue-hour">8:45 PM - 9:05 PM</span>
+        </span>
+      </div>
+    </div>
 
     <!-- TAB NAVIGATION -->
     <div class="tabs-container">

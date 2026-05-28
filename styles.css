@@ -324,13 +324,76 @@ h3 {
 }
 
 .header-bird-link {
+  display: block;
   width: fit-content;
-  margin-top: 4px;
+  margin: 12px 0 4px;
 }
 
 .header-bird-image {
   display: block;
   margin-bottom: 0;
+}
+
+.header-bird-sun-group {
+  width: 95%;
+  max-width: 1440px;
+  margin: 18px auto 14px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+
+.sun-periods-inline {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: #49645a;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.sun-period-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sun-svg-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.sun-label {
+  font-weight: 700;
+  color: var(--moss-dark);
+}
+
+.sun-time {
+  font-weight: 900;
+  color: #a86c12;
+}
+
+.sun-period-divider {
+  color: rgba(63, 118, 87, 0.28);
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .header-bird-sun-group {
+    width: min(100% - 20px, 1180px);
+    margin: 12px auto 10px;
+    gap: 12px;
+  }
+  .sun-periods-inline {
+    margin-top: 4px;
+  }
 }
 
 .lede-tabs {
@@ -414,7 +477,7 @@ h3 {
 }
 
 .app-updated-timestamp {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   color: var(--muted);
   font-size: 0.88rem;
   font-weight: 700;
@@ -2608,7 +2671,7 @@ a:focus-visible {
   z-index: 999;
   width: 95%;
   max-width: 1440px;
-  margin: -8px auto 12px;
+  margin: 0 auto 12px;
   padding: 4px;
   background: rgba(255, 253, 247, 0.85);
   backdrop-filter: blur(12px) saturate(120%);
@@ -2720,7 +2783,7 @@ a:focus-visible {
   .tabs-container {
     border-radius: 10px;
     padding: 3px;
-    margin: -4px auto 12px;
+    margin: 0 auto 12px;
   }
   
   .tab-btn {
@@ -2764,13 +2827,14 @@ a:focus-visible {
   gap: 10px;
   margin-left: 36px; /* Moved closer to the title (to the left) */
   flex-shrink: 0;
-  width: 276px; /* 15% wider (from 240px) */
+  width: 220px; /* Reduced width by 20% (from 276px) */
 }
 
 .header-location-button {
-  align-self: center; /* Center horizontally in the desktop column */
-  margin: 2px 0;
-  padding: 0 4px;
+  display: block;
+  margin: 0 0 12px;
+  padding: 0;
+  text-align: left;
 }
 
 .header-select-label {
@@ -2849,11 +2913,6 @@ a:focus-visible {
     width: auto;
     max-width: 100%;
   }
-  .header-location-button {
-    width: 100%;
-    text-align: center;
-    margin: 6px 0;
-  }
 }
 
 /* --- WIDESCREEN OPTIMIZATIONS --- */
@@ -2877,5 +2936,48 @@ a:focus-visible {
   }
   .hotspot-grid {
     gap: 16px;
+  }
+}
+
+@media (max-width: 1224px) {
+  .app-header {
+    min-height: auto;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 28px;
+    gap: 18px;
+  }
+
+  .app-header > div:first-child {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .header-visual {
+    width: 100%;
+    min-width: 0;
+    justify-items: center;
+    margin-top: 18px;
+  }
+
+  .header-visual .county-mini-map-link {
+    justify-items: center;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .header-visual .county-mini-map {
+    width: 100%;
+    height: 250px;
+  }
+
+  .header-visual .county-mini-map-legend {
+    width: 100%;
+    text-align: center;
+    padding-right: 0;
+  }
+
+  .header-visual img {
+    max-width: 440px;
   }
 }

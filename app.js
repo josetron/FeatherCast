@@ -3538,10 +3538,31 @@ async function setCountyMiniWeatherMap(regionName, latitude, longitude, current 
   const wind = current ? `${windArrowForDegrees((Number(current.wind_direction_10m || 0) + 180) % 360)} ${Math.round(current.wind_speed_10m)} mph` : "Wind pending";
   const rain = current ? `${Number(current.precipitation || 0).toFixed(2)} in rain` : "Rain pending";
   const condition = current ? weatherCodeLabel(current.weather_code) : "Weather loading";
-  const weatherSummary = `${weatherIcon(current?.weather_code)} ${temp} · ${condition} · ${rain} · ${wind}`;
+
+  let formattedTime = "";
+  if (current && current.time) {
+    try {
+      const parts = current.time.split("T");
+      if (parts.length === 2) {
+        const [hoursStr, minutesStr] = parts[1].split(":");
+        const h = parseInt(hoursStr, 10);
+        const m = parseInt(minutesStr, 10);
+        if (!isNaN(h) && !isNaN(m)) {
+          const ampm = h >= 12 ? "PM" : "AM";
+          const displayHour = h % 12 === 0 ? 12 : h % 12;
+          const displayMin = String(m).padStart(2, "0");
+          formattedTime = ` at ${displayHour}:${displayMin} ${ampm}`;
+        }
+      }
+    } catch {
+      formattedTime = "";
+    }
+  }
+
+  const weatherSummary = `${weatherIcon(current?.weather_code)} ${temp} · ${condition} · ${rain} · ${wind}${formattedTime}`;
 
   countyMiniMap.title = `${regionName} weather map. Click to view on RainViewer.`;
-  countyMiniMap.setAttribute("aria-label", `${regionName} weather map: ${temp}, ${condition}, ${wind}, ${rain}. Click to view on RainViewer.`);
+  countyMiniMap.setAttribute("aria-label", `${regionName} weather map: ${temp}, ${condition}, ${wind}, ${rain}${formattedTime}. Click to view on RainViewer.`);
   if (countyMiniMapLegend) countyMiniMapLegend.textContent = weatherSummary;
 
   applyCountyMiniMapLink(regionName, lat, lon);
@@ -3844,6 +3865,7 @@ async function updateCurrentWeather(region) {
       setAutoFillHint(frontPassageAutoFillHint, "NWS/Open-Meteo", true);
       setCountyMiniWeatherMap(title, cachedLocation.latitude, cachedLocation.longitude, cachedLocation.current);
       await updateColdFrontInputs(cachedLocation.latitude, cachedLocation.longitude, cachedLocation.weather);
+      updateSunPeriods(cachedLocation.weather);
       refreshScoredPanels();
     } else {
       setAutoFillHint(windAutoFillHint, "Open-Meteo", false);
@@ -3915,7 +3937,7 @@ async function geocodeRegionSearch(region) {
     weatherLocationCache.set(title, { latitude: match.latitude, longitude: match.longitude });
 
     const weatherResponse = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${match.latitude}&longitude=${match.longitude}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_direction_10m_dominant,wind_speed_10m_max,precipitation_sum,precipitation_probability_max&past_days=7&forecast_days=2&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${match.latitude}&longitude=${match.longitude}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_direction_10m_dominant,wind_speed_10m_max,precipitation_sum,precipitation_probability_max,sunrise,sunset&past_days=7&forecast_days=2&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`,
     );
     const weather = await weatherResponse.json();
     const current = weather.current;
@@ -3957,6 +3979,7 @@ async function geocodeRegionSearch(region) {
       setCountyMiniWeatherMap(title, match.latitude, match.longitude, current);
       applyWeatherToInputs(current);
       await updateColdFrontInputs(match.latitude, match.longitude, weather);
+      updateSunPeriods(weather);
       refreshScoredPanels();
     }
   } catch {
@@ -4022,6 +4045,73 @@ function rainBucketFromWeather(code, precipitation = 0) {
     return "yes";
   }
   return "no";
+}
+
+function updateSunPeriods(weather) {
+  if (!weather || !weather.daily) return;
+  const todayIndex = Math.max(0, weather.daily.time?.indexOf(localDateKey()) ?? 0);
+  const sunriseStr = weather.daily.sunrise?.[todayIndex];
+  const sunsetStr = weather.daily.sunset?.[todayIndex];
+  if (sunriseStr && sunsetStr) {
+    calculateAndDisplaySunPeriods(sunriseStr, sunsetStr);
+  }
+}
+
+function calculateAndDisplaySunPeriods(sunriseStr, sunsetStr) {
+  const parseTime = (timeStr) => {
+    const tPart = timeStr.split("T")[1];
+    const [hours, minutes] = tPart.split(":").map(Number);
+    return { hours, minutes };
+  };
+
+  const timeToMinutes = (t) => t.hours * 60 + t.minutes;
+  const minutesToTimeStr = (totalMinutes) => {
+    const m = ((totalMinutes % 60) + 60) % 60;
+    const h = Math.floor(((totalMinutes / 60) % 24 + 24) % 24);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const displayHour = h % 12 === 0 ? 12 : h % 12;
+    const displayMin = String(m).padStart(2, "0");
+    return `${displayHour}:${displayMin} ${ampm}`;
+  };
+
+  try {
+    const sr = parseTime(sunriseStr);
+    const ss = parseTime(sunsetStr);
+    const srMin = timeToMinutes(sr);
+    const ssMin = timeToMinutes(ss);
+
+    // Calculations
+    const goldenHourAmStart = srMin - 30;
+    const goldenHourAmEnd = srMin + 30;
+    
+    const daytimeStart = srMin + 30;
+    const daytimeEnd = ssMin - 30;
+    
+    const goldenHourPmStart = ssMin - 30;
+    const goldenHourPmEnd = ssMin + 30;
+    
+    const blueHourStart = ssMin + 20;
+    const blueHourEnd = ssMin + 40;
+
+    // Set DOM elements
+    const setVal = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    setVal("time-golden-hour-am", `${minutesToTimeStr(goldenHourAmStart)} - ${minutesToTimeStr(goldenHourAmEnd)}`);
+    setVal("time-sunrise", minutesToTimeStr(srMin));
+    setVal("time-daytime", `${minutesToTimeStr(daytimeStart)} - ${minutesToTimeStr(daytimeEnd)}`);
+    setVal("time-golden-hour-pm", `${minutesToTimeStr(goldenHourPmStart)} - ${minutesToTimeStr(goldenHourPmEnd)}`);
+    setVal("time-sunset", minutesToTimeStr(ssMin));
+    setVal("time-blue-hour", `${minutesToTimeStr(blueHourStart)} - ${minutesToTimeStr(blueHourEnd)}`);
+  } catch (e) {
+    console.error("Error calculating sun periods:", e);
+  }
+}
+
+function initSunPeriods() {
+  calculateAndDisplaySunPeriods("2026-05-28T06:32", "2026-05-28T20:25");
 }
 
 async function speciesPhotoUrl(name) {
@@ -5242,7 +5332,7 @@ function countiesFromOfflineData(state) {
 function normalizeCountyName(name) {
   return name
     .toLowerCase()
-    .replace(/\bcounty\b/g, "")
+    .replace(/\b(county|parish|borough|census\s+area|municipality|municipio)\b/g, "")
     .replace(/[^a-z0-9]/g, "");
 }
 
@@ -5273,11 +5363,11 @@ function stateByNameOrCode(value) {
 }
 
 function formatDetectedCountyName(name, state) {
-  const cleaned = String(name || "").trim();
+  let cleaned = String(name || "").trim();
   if (!cleaned) return "";
-  if (/\b(county|parish|borough|census area|municipality)\b/i.test(cleaned)) return cleaned;
-  if (state?.abbr === "LA") return `${cleaned} Parish`;
-  return `${cleaned} County`;
+  // Strip trailing " County", " Parish", " Borough", " Census Area", " Municipality", " Municipio"
+  cleaned = cleaned.replace(/\s+(County|Parish|Borough|Census\s+Area|Municipality|Municipio)\b/ig, "");
+  return cleaned;
 }
 
 function getCurrentPosition() {
@@ -5303,9 +5393,9 @@ function parseCensusLocation(data) {
   if (!county || !state) return null;
 
   const name = county.NAME || "";
-  const suffix = /\b(County|Parish|Borough|Census Area|Municipality|Municipio)\b/i.test(name) ? "" : " County";
+  const countyName = formatDetectedCountyName(name, state);
   return {
-    countyName: `${name}${suffix}`,
+    countyName,
     countyFips: county.COUNTY,
     stateAbbr: state.abbr,
     stateName: state.name,
@@ -5503,12 +5593,10 @@ async function fetchCountiesForState(state) {
 }
 
 function renderCountyOptions(counties, sourceLabel) {
-  const knownCodes = new Set(Object.keys(regions));
   const options = counties
     .map((county) => {
-      const richLabel = knownCodes.has(county.ebirdCode) ? " data-rich" : "";
       const priorityClass = county.isHistoricalPriority ? " class=\"historical-priority-county\"" : "";
-      return `<option${priorityClass} value="${county.ebirdCode}" data-name="${county.name}">${county.name}${richLabel}</option>`;
+      return `<option${priorityClass} value="${county.ebirdCode}" data-name="${county.name}">${county.name}</option>`;
     })
     .join("");
 
@@ -6966,6 +7054,7 @@ renderStateOptions();
 renderSpecies();
 updateReportTimestamp();
 updateAppTimestamp();
+initSunPeriods();
 loadCountiesForSelectedState();
 loadLatestBirdcastMap();
 
