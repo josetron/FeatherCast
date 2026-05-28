@@ -1930,30 +1930,79 @@ a:focus-visible {
 .insight-band article {
   min-height: 176px;
   padding: 22px;
-  background: rgba(255, 253, 248, 0.95);
   position: relative;
   overflow: hidden;
 }
 
-.insight-band article::after {
-  position: absolute;
-  right: 18px;
-  top: 16px;
-  color: rgba(63, 118, 87, 0.18);
-  font-size: 3rem;
-  font-weight: 900;
+.insight-band article * {
+  position: relative;
+  z-index: 1;
 }
 
-.insight-band article:nth-child(1)::after {
-  content: "↗";
+/* Sky Insight Column */
+.insight-band article:nth-child(1) {
+  border-top: 5px solid var(--river);
+  background:
+    linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)),
+    url("assets/migration-pressure.png") no-repeat center center / cover;
+}
+.insight-band article:nth-child(1) .section-label {
+  color: var(--river);
+}
+.insight-band article:nth-child(1) h3 {
+  color: #17424f;
+  font-size: 1.18rem;
+  font-weight: 850;
+}
+.insight-band article:nth-child(1) p:last-child {
+  color: #2b3a3d;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  font-weight: 650;
 }
 
-.insight-band article:nth-child(2)::after {
-  content: "≈";
+/* Weather Insight Column */
+.insight-band article:nth-child(2) {
+  border-top: 5px solid var(--sun);
+  background:
+    linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)),
+    url("assets/stop-signs.png") no-repeat center center / cover;
+}
+.insight-band article:nth-child(2) .section-label {
+  color: #b57a1e;
+}
+.insight-band article:nth-child(2) h3 {
+  color: #573b10;
+  font-size: 1.18rem;
+  font-weight: 850;
+}
+.insight-band article:nth-child(2) p:last-child {
+  color: #453315;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  font-weight: 650;
 }
 
-.insight-band article:nth-child(3)::after {
-  content: "◉";
+/* Ground Insight Column */
+.insight-band article:nth-child(3) {
+  border-top: 5px solid var(--moss);
+  background:
+    linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)),
+    url("assets/ebird-confirmation.png") no-repeat center center / cover;
+}
+.insight-band article:nth-child(3) .section-label {
+  color: var(--moss);
+}
+.insight-band article:nth-child(3) h3 {
+  color: var(--moss-dark);
+  font-size: 1.18rem;
+  font-weight: 850;
+}
+.insight-band article:nth-child(3) p:last-child {
+  color: #21382b;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  font-weight: 650;
 }
 
 .insight-band p:last-child,
@@ -2567,6 +2616,7 @@ a:focus-visible {
   grid-template-columns: minmax(240px, 0.8fr) 1fr;
   gap: 22px;
   align-items: center;
+  margin-top: 18px;
   background:
     radial-gradient(circle at 94% 16%, rgba(217, 155, 53, 0.22), transparent 32%),
     linear-gradient(120deg, #0d1512 0%, #14241d 58%, #0b100e 100%);
