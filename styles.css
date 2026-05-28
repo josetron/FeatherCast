@@ -170,7 +170,7 @@ h1 {
   max-width: 690px;
   font-family:
     "Aptos Narrow", "Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif;
-  font-size: clamp(1.5rem, 4vw, 2.8rem);
+  font-size: 2.8rem;
   font-weight: 850;
   font-stretch: condensed;
   line-height: 0.96;
@@ -258,7 +258,7 @@ h1 {
   color: #b58a5a;
   font-family:
     "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: clamp(1.32rem, 3.525vw, 2.535rem);
+  font-size: 2.5rem;
   font-style: italic;
   font-weight: 600;
   line-height: 1;
@@ -323,15 +323,75 @@ h3 {
   border-radius: 999px;
 }
 
-.header-bird-link {
-  display: block;
-  width: fit-content;
+.bird-speech-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
   margin: 12px 0 4px;
+}
+
+.header-bird-link {
+  width: fit-content;
+  position: relative;
+  top: 13px; /* Offset bird lower to align beak with speech bubble pointer */
 }
 
 .header-bird-image {
   display: block;
   margin-bottom: 0;
+}
+
+/* Comic speech bubble styling */
+.bird-speech-bubble {
+  position: relative;
+  background: var(--paper);
+  border: 1.5px solid var(--moss-dark);
+  border-radius: 14px;
+  padding: 8px 14px;
+  max-width: 240px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  font-family: "Outfit", "Segoe UI", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.25;
+  color: var(--moss-dark);
+  animation: bubblePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes bubblePop {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+
+/* Speech bubble pointer pointing left */
+.bird-speech-bubble::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 8px 8px 8px 0;
+  border-style: solid;
+  border-color: transparent var(--moss-dark) transparent transparent;
+  z-index: 1;
+}
+
+.bird-speech-bubble::after {
+  content: "";
+  position: absolute;
+  left: -6.5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 7px 7px 7px 0;
+  border-style: solid;
+  border-color: transparent var(--paper) transparent transparent;
+  z-index: 2;
 }
 
 .header-bird-sun-group {
@@ -394,10 +454,20 @@ h3 {
   .sun-periods-inline {
     margin-top: 4px;
   }
+  .bird-speech-container {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0 8px;
+  }
+  .bird-speech-bubble {
+    max-width: 200px;
+  }
 }
 
 .lede-tabs {
-  margin: 0 auto 12px;
+  margin: 0 0 12px; /* Left aligned by default */
   padding: 0;
   color: #4f645d;
   font-family:
@@ -406,19 +476,16 @@ h3 {
   font-weight: 600;
   font-style: italic;
   line-height: 1.35;
-  white-space: nowrap; /* Single line on desktop */
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
 }
 
 .dashboard-lede {
-  max-width: min(960px, calc(100% - 24px));
-  text-align: center;
+  max-width: 100%;
+  text-align: left;
 }
 
 @media (max-width: 990px) {
   .lede-tabs {
-    white-space: normal; /* Wrap text on tablets and mobile screens */
     font-size: 1.05rem;
   }
 }
@@ -1027,10 +1094,11 @@ main {
 }
 
 .risk-panel {
-  min-height: 360px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   position: relative;
   overflow: hidden;
 }
@@ -1039,7 +1107,7 @@ main {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .risk-bird {
@@ -1324,7 +1392,7 @@ main {
 }
 
 .compact-birdcast-frame {
-  min-height: 220px;
+  min-height: 347px;
 }
 
 .weather-map-heading {
@@ -1334,14 +1402,12 @@ main {
 }
 
 .weather-map-frame {
-  min-height: 220px;
+  min-height: 317px;
 }
 
 .compact-birdcast-map,
 .compact-weather-map {
   width: 100%;
-  min-height: 190px;
-  max-height: 230px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #e8ece4;
@@ -1349,9 +1415,16 @@ main {
   display: block;
 }
 
+.compact-birdcast-map {
+  min-height: 300px;
+  max-height: 363px;
+}
+
 .compact-weather-map {
+  min-height: 274px;
+  max-height: 331px;
   background: #f5f7f2;
-  height: 230px;
+  height: 331px;
   overflow: hidden;
 }
 
@@ -1523,29 +1596,33 @@ main {
 }
 
 .risk-summary {
-  margin: 18px 0;
-  max-width: 720px;
+  margin: 2px 0 4px;
+  max-width: 100%;
   color: var(--moss-dark);
-  font-size: 1.18rem;
+  font-size: 1.14rem;
   font-weight: 760;
+  line-height: 1.25;
   position: relative;
   z-index: 1;
 }
 
 .reason-list {
   display: grid;
-  gap: 8px;
+  gap: 4px;
+  max-width: 100%;
   position: relative;
   z-index: 1;
 }
 
 .reason-list p {
   margin: 0;
-  padding: 10px 12px;
+  padding: 4px 10px;
   border-left: 4px solid var(--sun);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #f8f0df;
   color: #4d4435;
+  font-size: 0.98rem;
+  line-height: 1.2;
 }
 
 .panel-heading {
@@ -2606,10 +2683,6 @@ a:focus-visible {
   .app-header,
   main {
     width: min(100% - 20px, 1180px);
-  }
-
-  h1 {
-    font-size: clamp(2.0rem, 14vw, 3.5rem);
   }
 
   .title-map-row {

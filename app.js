@@ -3204,6 +3204,22 @@ function renderRisk(result) {
   document.querySelector("#riskScore").textContent = result.score;
   document.querySelector("#meterFill").style.width = `${result.score}%`;
   document.querySelector("#riskSummary").textContent = result.summary;
+
+  const birdBubbleText = document.querySelector("#birdSpeechBubbleText");
+  if (birdBubbleText) {
+    const score = Number(result.score || 0);
+    let bubbleComment = "Probably you will not find us today";
+    if (score < 30) {
+      bubbleComment = "Probably you will not find us today";
+    } else if (score < 60) {
+      bubbleComment = "it's worth the effort to find us!";
+    } else if (score < 80) {
+      bubbleComment = "Hey we are there waiting for you!";
+    } else {
+      bubbleComment = "What Are you waiting for????";
+    }
+    birdBubbleText.textContent = bubbleComment;
+  }
   document.querySelector("#reasonList").innerHTML = result.reasons
     .slice(0, 5)
     .map((reason) => `<p>${reason}</p>`)
