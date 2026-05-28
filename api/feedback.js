@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 const FEEDBACK_SPREADSHEET_ID =
   process.env.GOOGLE_FEEDBACK_SPREADSHEET_ID || "120WL6INocgYrOP4OO0KW6zNSz0FAhk8tz45PZ8MHcwI";
 const FEEDBACK_SHEET_RANGE = process.env.GOOGLE_FEEDBACK_SHEET_RANGE || "A:D";
-const FEEDBACK_WEBHOOK_URL = process.env.GOOGLE_FEEDBACK_WEBHOOK_URL || "";
+const FEEDBACK_WEBHOOK_URL = process.env.GOOGLE_FEEDBACK_WEBHOOK_URL || "https://script.google.com/macros/s/AKfycbyNPF2m5CJCahQpd8eIHZbo5MHY7R9adxOD5_tDrYthYkty_wYEpyKJOgDCn8FsqCl0/exec";
 
 function sanitize(value, maxLength) {
   return String(value || "").trim().slice(0, maxLength);
