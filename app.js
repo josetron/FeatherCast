@@ -6967,16 +6967,15 @@ async function submitFeedback(event) {
     return;
   }
 
-  if (window.location.protocol === "file:") {
-    feedbackStatus.textContent = "Feedback sending works from the published website.";
-    return;
-  }
+  const apiPath = window.location.protocol === "file:"
+    ? "http://localhost:4173/api/feedback"
+    : "/api/feedback";
 
   feedbackSubmit.disabled = true;
   feedbackStatus.textContent = "Sending feedback...";
 
   try {
-    const response = await fetch("/api/feedback", {
+    const response = await fetch(apiPath, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

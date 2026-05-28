@@ -578,6 +578,17 @@ function serveStatic(requestUrl, response) {
 
 http
   .createServer(async (request, response) => {
+    // Add CORS headers for local file:// access
+    response.setHeader("Access-Control-Allow-Origin", "*");
+    response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    if (request.method === "OPTIONS") {
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
     const requestUrl = new URL(request.url, `http://${request.headers.host}`);
     if (requestUrl.pathname === "/api/birdcast") {
       await handleBirdcast(requestUrl, response);
@@ -597,6 +608,46 @@ http
     }
     if (requestUrl.pathname === "/api/hotspot-location") {
       await handleHotspotLocation(requestUrl, response);
+      return;
+    }
+    if (requestUrl.pathname === "/api/feedback") {
+      let body = "";
+      request.on("data", (chunk) => {
+        body += chunk;
+      });
+      request.on("end", async () => {
+        try {
+          const parsedBody = body ? JSON.parse(body) : {};
+          const reqMock = {
+            method: request.method,
+            body: parsedBody,
+          };
+          const resMock = {
+            headers: {},
+            statusCode: 200,
+            setHeader(name, value) {
+              this.headers[name] = value;
+              response.setHeader(name, value);
+            },
+            status(code) {
+              this.statusCode = code;
+              return this;
+            },
+            json(data) {
+              response.writeHead(this.statusCode || 200, {
+                "Content-Type": "application/json",
+                ...this.headers,
+              });
+              response.end(JSON.stringify(data));
+            },
+          };
+          const module = await import("./api/feedback.js");
+          await module.default(reqMock, resMock);
+        } catch (error) {
+          response.writeHead(500, { "Content-Type": "application/json" });
+          response.end(JSON.stringify({ error: error.message || "Failed to process feedback" }));
+        }
+      });
       return;
     }
     serveStatic(requestUrl, response);
