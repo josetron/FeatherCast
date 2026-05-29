@@ -968,8 +968,9 @@ main {
 .risk-panel {
   border-top: 7px solid var(--sun);
   background:
-    radial-gradient(circle at 88% 14%, rgba(255, 243, 196, 0.86), transparent 34%),
-    linear-gradient(180deg, #fff3c6 0%, #ffe7a6 100%);
+    radial-gradient(circle at 88% 14%, rgba(255, 243, 196, 0.4), transparent 34%),
+    linear-gradient(rgba(255, 243, 196, 0.86), rgba(255, 231, 166, 0.86)),
+    url("assets/current-signal-bg.jpg") no-repeat center center / cover;
   color: #46370f;
   transition: all 0.38s ease; /* Smooth transition when risk level updates */
 }
@@ -980,8 +981,9 @@ main {
 .risk-panel.is-low {
   border-top-color: #8ca05b; /* var(--leaf) */
   background:
-    radial-gradient(circle at 88% 14%, rgba(238, 244, 233, 0.9), transparent 34%),
-    linear-gradient(180deg, #eef4e9 0%, #dfeadc 100%);
+    radial-gradient(circle at 88% 14%, rgba(238, 244, 233, 0.4), transparent 34%),
+    linear-gradient(rgba(238, 244, 233, 0.88), rgba(223, 234, 220, 0.88)),
+    url("assets/current-signal-bg.jpg") no-repeat center center / cover;
   color: #24361f;
 }
 .risk-panel.is-low .section-label,
@@ -1000,8 +1002,9 @@ main {
 .risk-panel.is-medium {
   border-top-color: var(--sun);
   background:
-    radial-gradient(circle at 88% 14%, rgba(255, 243, 196, 0.86), transparent 34%),
-    linear-gradient(180deg, #fff3c6 0%, #ffe7a6 100%);
+    radial-gradient(circle at 88% 14%, rgba(255, 243, 196, 0.4), transparent 34%),
+    linear-gradient(rgba(255, 243, 196, 0.86), rgba(255, 231, 166, 0.86)),
+    url("assets/current-signal-bg.jpg") no-repeat center center / cover;
   color: #46370f;
 }
 .risk-panel.is-medium .section-label,
@@ -1020,8 +1023,9 @@ main {
 .risk-panel.is-high {
   border-top-color: #e06c3a;
   background:
-    radial-gradient(circle at 88% 14%, rgba(255, 226, 204, 0.86), transparent 34%),
-    linear-gradient(180deg, #ffe2cc 0%, #ffccaa 100%);
+    radial-gradient(circle at 88% 14%, rgba(255, 226, 204, 0.4), transparent 34%),
+    linear-gradient(rgba(255, 226, 204, 0.88), rgba(255, 204, 170, 0.88)),
+    url("assets/current-signal-bg.jpg") no-repeat center center / cover;
   color: #59250b;
 }
 .risk-panel.is-high .section-label,
@@ -1040,8 +1044,9 @@ main {
 .risk-panel.is-extreme {
   border-top-color: var(--berry);
   background:
-    radial-gradient(circle at 88% 14%, rgba(255, 214, 216, 0.86), transparent 34%),
-    linear-gradient(180deg, #ffd6d8 0%, #fcaeb2 100%);
+    radial-gradient(circle at 88% 14%, rgba(255, 214, 216, 0.4), transparent 34%),
+    linear-gradient(rgba(255, 214, 216, 0.88), rgba(252, 174, 178, 0.88)),
+    url("assets/current-signal-bg.jpg") no-repeat center center / cover;
   color: #5c181b;
 }
 .risk-panel.is-extreme .section-label,
@@ -1619,7 +1624,7 @@ main {
   padding: 4px 10px;
   border-left: 4px solid var(--sun);
   border-radius: 6px;
-  background: #f8f0df;
+  background: transparent;
   color: #4d4435;
   font-size: 0.98rem;
   line-height: 1.2;
@@ -2082,26 +2087,30 @@ a:focus-visible {
 
 .guide-grid article:nth-child(1) {
   background:
-    radial-gradient(circle at 92% 12%, rgba(247, 213, 111, 0.48), transparent 34%),
-    linear-gradient(180deg, #fff2bf 0%, #f7dea0 100%);
+    radial-gradient(circle at 92% 12%, rgba(247, 213, 111, 0.35), transparent 34%),
+    linear-gradient(rgba(255, 242, 191, 0.76), rgba(247, 222, 160, 0.76)),
+    url("assets/radar-monitor-bg.jpg") no-repeat center center / cover;
 }
 
 .guide-grid article:nth-child(2) {
   background:
-    radial-gradient(circle at 92% 12%, rgba(148, 184, 209, 0.4), transparent 34%),
-    linear-gradient(180deg, #dff1f1 0%, #bddde3 100%);
+    radial-gradient(circle at 92% 12%, rgba(148, 184, 209, 0.3), transparent 34%),
+    linear-gradient(rgba(223, 241, 241, 0.76), rgba(189, 221, 227, 0.76)),
+    url("assets/weather-stop-signs-bg.jpg") no-repeat center center / cover;
 }
 
 .guide-grid article:nth-child(3) {
   background:
-    radial-gradient(circle at 92% 12%, rgba(189, 214, 145, 0.46), transparent 34%),
-    linear-gradient(180deg, #e5f0d0 0%, #c5ddaa 100%);
+    radial-gradient(circle at 92% 12%, rgba(189, 214, 145, 0.35), transparent 34%),
+    linear-gradient(rgba(229, 240, 208, 0.76), rgba(197, 221, 170, 0.76)),
+    url("assets/ground-spikes-bg.jpg") no-repeat center center / cover;
 }
 
 .guide-grid article:nth-child(4) {
   background:
-    radial-gradient(circle at 92% 12%, rgba(211, 132, 83, 0.28), transparent 34%),
-    linear-gradient(180deg, #f8ded0 0%, #efc1a4 100%);
+    radial-gradient(circle at 92% 12%, rgba(211, 132, 83, 0.22), transparent 34%),
+    linear-gradient(rgba(248, 222, 208, 0.76), rgba(239, 193, 164, 0.76)),
+    url("assets/field-cues-bg.jpg") no-repeat center center / cover;
 }
 
 .guide-grid article h3,
@@ -2819,7 +2828,7 @@ a:focus-visible {
   min-height: 34px;
   padding: 7px 13px;
   border: none;
-  background: transparent;
+  background: #fffcd6; /* Very light yellow for unselected tabs */
   color: var(--muted);
   font-family: inherit;
   font-size: 0.86rem;
@@ -2840,7 +2849,7 @@ a:focus-visible {
 
 .tab-btn:hover {
   color: var(--moss);
-  background: rgba(63, 118, 87, 0.07);
+  background: #fff6b8; /* Soft warm yellow on hover */
 }
 
 .tab-btn:hover .tab-icon {
