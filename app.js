@@ -2513,14 +2513,21 @@ function updateSeasonSubtitle() {
   const date = new Date();
   const month = date.getMonth(); // 0-indexed: 0=Jan, 1=Feb, 2=Mar, etc.
 
+  // Remove existing season classes
+  subtitleEl.classList.remove("season-spring", "season-summer", "season-fall", "season-winter");
+
   if (month >= 2 && month <= 4) {
     subtitleEl.textContent = "Spring Migration";
+    subtitleEl.classList.add("season-spring");
   } else if (month >= 5 && month <= 7) {
     subtitleEl.textContent = "Summer";
+    subtitleEl.classList.add("season-summer");
   } else if (month >= 8 && month <= 10) {
     subtitleEl.textContent = "Fall Migration";
+    subtitleEl.classList.add("season-fall");
   } else {
     subtitleEl.textContent = "Winter";
+    subtitleEl.classList.add("season-winter");
   }
 }
 

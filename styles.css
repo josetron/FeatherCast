@@ -255,13 +255,51 @@ h1 {
 
 .season-subtitle {
   margin: -6px 0 16px;
-  color: #b58a5a;
-  font-family:
-    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-size: 2.5rem;
+  line-height: 1;
+  display: inline-block;
+  background-clip: text;
+  -webkit-background-clip: text;
+  transition: all 0.5s ease;
+}
+
+.season-subtitle.season-spring {
+  font-family: "Playfair Display", "Iowan Old Style", Georgia, serif;
   font-style: italic;
   font-weight: 600;
-  line-height: 1;
+  background-image: linear-gradient(135deg, #2e7d32, #66bb6a);
+  -webkit-text-fill-color: transparent;
+  color: #2e7d32;
+}
+
+.season-subtitle.season-summer {
+  font-family: "Montserrat", "Outfit", "Segoe UI", sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background-image: linear-gradient(135deg, #e65100, #ffb74d);
+  -webkit-text-fill-color: transparent;
+  color: #e65100;
+}
+
+.season-subtitle.season-fall {
+  font-family: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+  background-image: linear-gradient(135deg, #a0522d, #ffa000);
+  -webkit-text-fill-color: transparent;
+  color: #a0522d;
+}
+
+.season-subtitle.season-winter {
+  font-family: "Space Grotesk", "Outfit", "Segoe UI", sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background-image: linear-gradient(135deg, #0d47a1, #80deea);
+  -webkit-text-fill-color: transparent;
+  color: #0d47a1;
 }
 
 h2 {
