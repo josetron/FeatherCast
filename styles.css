@@ -3030,17 +3030,23 @@ a:focus-visible {
   margin-top: 2px;
 }
 
+.ebird-links-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+}
+
 .ebird-trends-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
+  gap: 5px;
+  font-size: 0.62rem;
   font-weight: 700;
   color: var(--moss);
   text-decoration: none;
-  padding: 4px 6px;
+  padding: 1px 4px;
   transition: all 0.2s ease;
-  margin-top: -2px;
   width: fit-content;
 }
 
@@ -3052,11 +3058,11 @@ a:focus-visible {
 .ebird-trends-link .link-icon {
   flex-shrink: 0;
   opacity: 0.8;
-  transition: transform 0.2s ease;
+  transition: transform 0.15s ease;
 }
 
 .ebird-trends-link:hover .link-icon {
-  transform: translate(2px, -2px);
+  transform: translate(1.5px, -1.5px);
   opacity: 1;
 }
 
@@ -3106,11 +3112,17 @@ a:focus-visible {
     width: auto;
     max-width: 100%;
   }
+  .ebird-links-group {
+    width: 100%;
+    margin-top: -6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
   .ebird-trends-link {
     width: 100%;
     justify-content: flex-start;
-    margin-top: -6px;
-    padding: 4px 0;
+    padding: 2px 0;
   }
 }
 
