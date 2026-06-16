@@ -5633,6 +5633,20 @@ function renderRegion() {
   const resolvedState = states.find((s) => s.name === region.state) || getSelectedState();
   const stateAbbr = resolvedState ? resolvedState.abbr : "";
   const regionSearchTerm = stateAbbr ? `${region.name}, ${stateAbbr}` : region.name;
+
+  // 1. eBird Region Explorer link (Option 1: filters dynamically by region)
+  const ebirdHeaderRegionLink = document.querySelector("#ebirdHeaderRegionLink");
+  if (ebirdHeaderRegionLink) {
+    ebirdHeaderRegionLink.href = ebirdUrl;
+    const regionSpan = ebirdHeaderRegionLink.querySelector("span");
+    if (regionSpan) {
+      regionSpan.textContent = `eBird Region: ${regionSearchTerm}`;
+    } else {
+      ebirdHeaderRegionLink.textContent = `eBird Region: ${regionSearchTerm}`;
+    }
+  }
+
+  // 2. eBird Status & Trends link (science.ebird.org)
   const ebirdTrendsLink = document.querySelector("#ebirdTrendsLink");
   if (ebirdTrendsLink) {
     ebirdTrendsLink.href = `https://science.ebird.org/en/status-and-trends/species?search=${encodeURIComponent(regionSearchTerm)}`;
