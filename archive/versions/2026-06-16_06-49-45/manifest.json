@@ -1,0 +1,24 @@
+{
+  "name": "Bird Fallout Dashboard",
+  "short_name": "Bird Fallout",
+  "description": "Field guide dashboard to determine bird fallouts from migration and weather reports.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fffdf7",
+  "theme_color": "#1f4c36",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

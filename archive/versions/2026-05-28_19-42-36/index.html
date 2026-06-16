@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FeatherCast</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-copy">
+        <p class="eyebrow eyebrow-row">
+          <span id="regionEyebrow">Choose a county or region</span>
+          <a id="currentWeather" class="current-weather" href="#" target="_blank" rel="noreferrer">Weather loading...</a>
+        </p>
+        <span id="regionTitle" class="visually-hidden">County</span>
+        <div class="title-map-row">
+          <div class="title-copy">
+            <h1>FeatherCast</h1>
+            <p class="season-subtitle">Spring Migration</p>
+            <p id="reportTimestamp" class="report-timestamp">Report time pending</p>
+            <p id="appUpdatedTimestamp" class="app-updated-timestamp">App updated time pending</p>
+            <button id="useCurrentLocation" class="current-location-button header-location-button" type="button">(use current location)</button>
+            <div class="bird-speech-container">
+              <a
+                class="lede-bird-link header-bird-link"
+                href="https://500px.com/p/josetron/galleries/bird-of-the-world"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open Bird of the World gallery"
+              >
+                <img src="assets/PaintedBfav.png" class="lede-bird-image header-bird-image" alt="Painted Bunting illustration" />
+              </a>
+              <div class="bird-speech-bubble" id="birdSpeechBubble">
+                <span id="birdSpeechBubbleText">Probably you will not find us today</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-select-group">
+            <label class="header-select-label">
+              <span class="header-field-title">US State/Country</span>
+              <select id="stateSelect"></select>
+            </label>
+            <label class="header-select-label">
+              <span class="header-field-title">County / region</span>
+              <select id="regionSelect"></select>
+              <span id="countyStatus" class="field-note">Loading counties...</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="header-visual">
+        <a
+          id="countyMiniMapLink"
+          class="county-mini-map-link"
+          href="https://www.google.com/search?q=weather+forecast"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Open selected county weather forecast"
+        >
+          <div
+            id="countyMiniMap"
+            class="county-mini-map"
+            title="Selected county weather map"
+            role="img"
+            aria-label="Selected county weather map"
+          ></div>
+          <span id="countyMiniMapLegend" class="county-mini-map-legend">Weather loading...</span>
+        </a>
+      </div>
+    </header>
+    <div class="header-bird-sun-group">
+      <div class="sun-periods-inline" id="sunPeriodsInline">
+        <svg width="0" height="0" style="position: absolute; overflow: hidden;" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad-golden-hour-am" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#d39e2e" />
+              <stop offset="100%" stop-color="#f5d061" />
+            </linearGradient>
+            <linearGradient id="grad-sunrise" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#c94b4b" />
+              <stop offset="100%" stop-color="#ffb75e" />
+            </linearGradient>
+            <linearGradient id="grad-daytime" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff8c00" />
+              <stop offset="100%" stop-color="#ffdf00" />
+            </linearGradient>
+            <linearGradient id="grad-golden-hour-pm" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#d35400" />
+              <stop offset="100%" stop-color="#f1c40f" />
+            </linearGradient>
+            <linearGradient id="grad-sunset" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#8e44ad" />
+              <stop offset="50%" stop-color="#c0392b" />
+              <stop offset="100%" stop-color="#d35400" />
+            </linearGradient>
+            <linearGradient id="grad-blue-hour" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1a2a6c" />
+              <stop offset="100%" stop-color="#b21f1f" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-golden-hour-am" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="5" fill="url(#grad-golden-hour-am)" stroke="none" />
+            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="url(#grad-golden-hour-am)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Golden Hour (AM)</span>
+          <span class="sun-time" id="time-golden-hour-am">6:02 AM - 7:02 AM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-sunrise" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 18a6 6 0 0 0 6-6H6a6 6 0 0 0 6 6z" fill="url(#grad-sunrise)" stroke="none" />
+            <path d="M12 2v3M5.22 5.22l2.12 2.12M18.78 5.22l-2.12 2.12M2 18h20" stroke="url(#grad-sunrise)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Sunrise</span>
+          <span class="sun-time" id="time-sunrise">6:32 AM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-daytime" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="6" fill="url(#grad-daytime)" stroke="none" />
+            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="url(#grad-daytime)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Daytime</span>
+          <span class="sun-time" id="time-daytime">7:02 AM - 7:55 PM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-golden-hour-pm" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="11" r="5" fill="url(#grad-golden-hour-pm)" stroke="none" />
+            <path d="M12 2v2M12 18v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 11h2M20 11h2M4.22 17.78l1.42-1.42M18.36 4.64l1.42-1.42" stroke="url(#grad-golden-hour-pm)" stroke-width="2" stroke-linecap="round" fill="none" />
+            <path d="M4 22h16" stroke="url(#grad-golden-hour-pm)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Golden Hour (PM)</span>
+          <span class="sun-time" id="time-golden-hour-pm">7:55 PM - 8:55 PM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-sunset" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 16a5 5 0 0 0 5-5H7a5 5 0 0 0 5 5z" fill="url(#grad-sunset)" stroke="none" />
+            <path d="M2 20h20M2 16h20M12 2v3M6.22 6.22l1.42 1.42M17.78 6.22l-1.42 1.42" stroke="url(#grad-sunset)" stroke-width="2" stroke-linecap="round" fill="none" />
+          </svg>
+          <span class="sun-label">Sunset</span>
+          <span class="sun-time" id="time-sunset">8:25 PM</span>
+        </span>
+        <span class="sun-period-divider">·</span>
+        <span class="sun-period-item">
+          <svg viewBox="0 0 24 24" class="sun-svg-icon icon-blue-hour" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="url(#grad-blue-hour)" stroke="none" />
+          </svg>
+          <span class="sun-label">Blue Hour</span>
+          <span class="sun-time" id="time-blue-hour">8:45 PM - 9:05 PM</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- TAB NAVIGATION -->
+    <div class="tabs-container">
+        <nav class="tabs-nav" role="tablist" aria-label="FeatherCast Tabs">
+          <button class="tab-btn active" data-tab="dashboard" role="tab" aria-selected="true" aria-controls="tab-dashboard" id="tab-btn-dashboard">
+            <svg class="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9"></rect>
+              <rect x="14" y="3" width="7" height="5"></rect>
+              <rect x="14" y="12" width="7" height="9"></rect>
+              <rect x="3" y="16" width="7" height="5"></rect>
+            </svg>
+            Dashboard
+          </button>
+          <button class="tab-btn" data-tab="hotspots" role="tab" aria-selected="false" aria-controls="tab-hotspots" id="tab-btn-hotspots">
+            <svg class="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            Hotspots
+          </button>
+          <button class="tab-btn" data-tab="birds" role="tab" aria-selected="false" aria-controls="tab-birds" id="tab-btn-birds">
+            <svg class="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.38 3.46L16 7.83l-1.34-.66L13.3 8.5l2.23 2.23.66-1.34.66-1.34 4.38-4.38a1 1 0 0 0-1.42-1.42zM12.3 11.3a3 3 0 1 0-4.24 0l-5.65 5.66a1 1 0 0 0 1.42 1.42l5.65-5.66a3 3 0 0 0 2.82-1.42z"></path>
+            </svg>
+            Birds
+          </button>
+          <button class="tab-btn" data-tab="resources" role="tab" aria-selected="false" aria-controls="tab-resources" id="tab-btn-resources">
+            <svg class="tab-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Other Info
+          </button>
+        </nav>
+      </div>
+
+    <main>
+      <!-- TAB 1: DASHBOARD -->
+      <div id="tab-dashboard" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-dashboard">
+        <p class="lede-tabs dashboard-lede">
+          A field dashboard for spotting when migration, weather, and local reports point to birds concentration in the selected area.
+        </p>
+        <section class="hero-grid" aria-label="Current fallout summary">
+          <article class="risk-panel">
+            <div class="risk-header-group">
+              <div class="risk-topline">
+                <div>
+                  <p id="currentSignalLabel" class="section-label">Current Signal</p>
+                  <h2 id="riskLabel">Calculating</h2>
+                </div>
+                <div class="risk-score" aria-label="Fallout score">
+                  <span id="riskScore">0</span>
+                  <small>/100</small>
+                </div>
+              </div>
+              <img id="riskBird" class="risk-bird" src="assets/HAPPYBIRDFAV.png" alt="Signal bird" />
+              <div class="meter" aria-hidden="true">
+                <div id="meterFill" class="meter-fill"></div>
+              </div>
+            </div>
+            <p id="riskSummary" class="risk-summary"></p>
+            <div id="reasonList" class="reason-list"></div>
+          </article>
+
+          <article class="compact-map-panel">
+            <div class="compact-map-heading">
+              <div>
+                <p class="section-label">Radar Context</p>
+                <h2>BirdCast Map</h2>
+              </div>
+              <a href="https://birdcast.org/migration-tools/live-migration-maps/" target="_blank" rel="noreferrer">
+                Open map
+              </a>
+            </div>
+            <div class="compact-birdcast-frame">
+              <img id="birdcastMapImage" class="compact-birdcast-map" alt="Most recent BirdCast live migration map" />
+              <p id="birdcastMapStatus" class="field-note">Loading latest BirdCast map frame...</p>
+            </div>
+            <div class="compact-map-heading weather-map-heading">
+              <div>
+                <p class="section-label">Weather Context</p>
+                <h2>Wind Direction</h2>
+              </div>
+              <a href="https://www.windy.com/?wind,37.996,-96.943,4" target="_blank" rel="noreferrer">
+                Open Windy
+              </a>
+            </div>
+            <div class="compact-birdcast-frame weather-map-frame">
+              <iframe
+                id="windMap"
+                class="compact-weather-map windy-frame"
+                title="Windy United States wind map"
+                width="100%"
+                height="560"
+                loading="lazy"
+                src="https://embed.windy.com/embed2.html?lat=38.5&lon=-97.5&zoom=4&level=surface&overlay=wind&product=ecmwf&calendar=now&metricWind=mph&metricTemp=%C2%B0F&type=map"
+                frameborder="0"
+              ></iframe>
+              <p id="windMapStatus" class="field-note">Live Windy surface-wind map for current wind direction context.</p>
+            </div>
+          </article>
+
+          <article class="control-panel">
+            <div class="panel-heading">
+              <h2>Conditions</h2>
+            </div>
+            <form id="signalForm" class="signal-form">
+              <label id="manualCountyLabel" class="is-hidden">
+                Manual county name
+                <input id="manualCountyName" type="text" value="My County" />
+              </label>
+              <label id="manualCodeLabel" class="is-hidden">
+                Advanced region code, optional
+                <input id="manualRegionCode" type="text" placeholder="Usually not needed" />
+                <span class="field-note">Use only when the county name cannot be matched automatically.</span>
+              </label>
+              <label id="manualStateLabel" class="is-hidden">
+                State abbreviation
+                <input id="manualStateAbbr" type="text" placeholder="Example: TX" maxlength="2" />
+              </label>
+              <label class="birdcast-stat">
+                <span class="field-title field-title-plain">Overnight birds crossed <span id="birdsCrossedHint" class="label-hint">(Auto-filled from BirdCast)</span></span>
+                <span class="birdcast-value-row">
+                  <output id="birdsCrossedDisplay" class="birdcast-value">0</output>
+                  <span id="birdsCrossedLevel" class="birdcast-level is-hidden"></span>
+                </span>
+                <span id="birdsCrossedCaption" class="birdcast-caption">Birds have crossed the selected county so far tonight (est.).</span>
+                <input id="birdsCrossed" class="birdcast-manual-input is-hidden" type="number" min="0" step="50000" value="0" aria-label="Manual overnight birds crossed" />
+              </label>
+              <label class="birdcast-stat">
+                <span class="field-title field-title-plain">Birds currently in flight <span id="birdsInFlightHint" class="label-hint">(Auto-filled from BirdCast)</span></span>
+                <span class="birdcast-value-row">
+                  <output id="birdsInFlightDisplay" class="birdcast-value in-flight-value">0</output>
+                  <span id="birdsInFlightLevel" class="birdcast-level is-hidden"></span>
+                </span>
+                <span id="birdsInFlightCaption" class="birdcast-caption">Birds now in flight over the selected county (est.).</span>
+                <input id="birdsInFlight" class="birdcast-manual-input is-hidden" type="number" min="0" step="10000" value="0" aria-label="Manual birds currently in flight" />
+              </label>
+              <a id="birdcastLink" class="source-link birdcast-input-link" href="https://dashboard.birdcast.org/" target="_blank" rel="noreferrer">
+                BirdCast Region
+              </a>
+              <label class="birdcast-stat">
+                <span class="field-title">Wind direction <span id="windAutoFillHint" class="label-hint">(Auto-filled from Open-Meteo)</span></span>
+                <output id="windDirectionDisplay" class="status-value">From south / southeast, tailwind for spring migrants</output>
+                <select id="windDirection" disabled>
+                  <option value="north">From north / northeast, opposing spring migrants</option>
+                  <option value="east">From east, crosswind</option>
+                  <option value="south" selected>From south / southeast, tailwind for spring migrants</option>
+                  <option value="west">From west, crosswind</option>
+                </select>
+              </label>
+              <label class="birdcast-stat">
+                <span class="field-title">Rain nearby <span id="rainAutoFillHint" class="label-hint">(Auto-filled from Open-Meteo)</span></span>
+                <output id="rainDisplay" class="status-value">No rain</output>
+                <select id="rain" disabled>
+                  <option value="yes">Yes, light to moderate</option>
+                  <option value="storms">Storms / heavy cells</option>
+                  <option value="no" selected>No rain</option>
+                </select>
+              </label>
+              <label class="birdcast-stat">
+                <span class="field-title">Cold front status <span id="frontStatusAutoFillHint" class="label-hint">(Auto-filled from NWS/Open-Meteo)</span></span>
+                <output id="frontStatusDisplay" class="status-value">No front nearby</output>
+                <select id="frontStatus" disabled>
+                  <option value="passing">Passing through now</option>
+                  <option value="approaching">Approaching within 24 hours</option>
+                  <option value="passed">Passed in the last 12 hours</option>
+                  <option value="none" selected>No front nearby</option>
+                </select>
+              </label>
+              <label class="birdcast-stat">
+                <span class="field-title">Expected front passage <span id="frontPassageAutoFillHint" class="label-hint">(Auto-filled from NWS/Open-Meteo)</span></span>
+                <output id="frontPassageDisplay" class="status-value">Not entered</output>
+                <input id="frontPassage" class="visually-hidden" type="text" value="" placeholder="Optional timing, if a front is nearby" />
+              </label>
+              <span id="frontMapLinks" class="front-map-links">
+                <img
+                  id="frontMapLink"
+                  class="current-front-map-image"
+                  src="https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif"
+                  alt="Current Front Map"
+                  loading="lazy"
+                />
+                <a
+                  class="front-map-link"
+                  href="https://www.wpc.ncep.noaa.gov/basicwx/day0-7loop.html?utm_source=chatgpt.com"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Animated forecast
+                </a>
+              </span>
+              <label class="birdcast-stat">
+                <span class="field-title">eBird migrant signal <span id="ebirdAutoFillHint" class="label-hint">(Auto-filled from eBird)</span></span>
+                <output id="ebirdSignalDisplay" class="status-value">Quiet or stale reports</output>
+                <select id="ebirdSignal" disabled>
+                  <option value="spike">Checklist spike</option>
+                  <option value="rare">Rare/flagged reports</option>
+                  <option value="normal">Normal activity</option>
+                  <option value="quiet" selected>Quiet or stale reports</option>
+                </select>
+              </label>
+              <div class="panel-heading ebird-panel-heading">
+                <h2>eBird reports</h2>
+              </div>
+              <div id="ebirdLiveSummary" class="live-summary">
+                eBird live data has not been pulled yet. The API token is embedded for this local prototype.
+              </div>
+            </form>
+          </article>
+        </section>
+
+        <section class="insight-band" aria-label="Primary insights">
+          <article>
+            <p class="section-label">Sky</p>
+            <h3>Migration Pressure</h3>
+            <p id="skyInsight"></p>
+          </article>
+          <article>
+            <p class="section-label">Weather</p>
+            <h3>Stop Signs</h3>
+            <p id="weatherInsight"></p>
+          </article>
+          <article>
+            <p class="section-label">Ground</p>
+            <h3>eBird Confirmation</h3>
+            <p id="groundInsight"></p>
+          </article>
+        </section>
+      </div>
+
+      <!-- TAB 2: HOTSPOTS -->
+      <div id="tab-hotspots" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-hotspots">
+        <section class="section-header">
+          <div>
+            <p class="section-label">Go Here First</p>
+            <h2>Likely Concentration Hotspots</h2>
+            <p id="hotspotHeadingMeta" class="section-meta"></p>
+          </div>
+          <p id="hotspotIntro">Ranked by water, riparian cover, migrant habitat, and current sample signals.</p>
+        </section>
+
+        <section id="hotspotGrid" class="hotspot-grid" aria-label="Ranked birding hotspots"></section>
+
+        <section class="hotspot-search-panel" aria-label="Find nearby hotspots">
+          <div class="hotspot-search-form">
+            <label>
+              <span class="field-title">Choose city</span>
+              <select id="hotspotCitySelect">
+                <option value="">Select a city</option>
+              </select>
+            </label>
+            <label>
+              <span class="field-title">Search hotspot by location (street)</span>
+              <input id="hotspotLocationInput" type="text" placeholder="City or street inside the selected county" />
+            </label>
+            <div class="hotspot-search-actions">
+              <button id="hotspotLocationSearch" type="button">Search</button>
+              <button id="hotspotUseCurrentLocation" type="button">Use my current location</button>
+              <button id="hotspotClearSearch" class="is-hidden" type="button">Clear</button>
+            </div>
+          </div>
+          <p id="hotspotSearchStatus" class="field-note">Enter a city in the selected county or use your current location to show the closest 4 hotspots.</p>
+        </section>
+
+        <section id="hotspotSearchGrid" class="hotspot-grid hotspot-search-grid" aria-label="Nearby hotspot search results"></section>
+        <button id="hotspotShowMore" class="hotspot-show-more is-hidden" type="button">Show more</button>
+      </div>
+
+      <!-- TAB 3: BIRDS -->
+      <div id="tab-birds" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-birds">
+        <section class="two-column">
+          <article class="species-panel">
+            <div class="panel-heading">
+              <p class="section-label">Watch List</p>
+              <h2>Migrant Signals <span id="speciesRegionTitle"></span></h2>
+              <p id="speciesSourceNote" class="field-note">Fallback watch list shown until eBird reports are pulled.</p>
+            </div>
+            <div id="speciesList" class="species-list"></div>
+          </article>
+
+          <article class="rare-panel">
+            <div class="panel-heading">
+              <p class="section-label">eBird Review</p>
+              <h2>Notable Species</h2>
+              <p id="rareSpeciesNote" class="field-note">Pull eBird reports to load notable species from the last 7 days.</p>
+            </div>
+            <div id="rareSpeciesList" class="rare-species-list"></div>
+          </article>
+
+          <article class="notebook-panel">
+            <div class="panel-heading">
+              <p class="section-label">Local List</p>
+              <h2>Non-Migrant Signals</h2>
+              <p id="nonMigrantSourceNote" class="field-note">Recent observations of likely resident or non-migrant species from the latest eBird pull.</p>
+            </div>
+            <div id="nonMigrantList" class="species-list"></div>
+          </article>
+        </section>
+
+        <section class="bird-finder-panel">
+          <div class="panel-heading">
+            <p class="section-label">Find A Bird</p>
+            <h2>Looking for a Bird in your area?</h2>
+            <p>Input the full or partial name here.</p>
+          </div>
+          <div class="bird-finder-form">
+            <label>
+              <span class="field-title">Bird name</span>
+              <input id="birdSearchInput" type="text" placeholder="Example: warbler, bunting, oriole" />
+            </label>
+            <label id="birdMatchLabel" class="is-hidden">
+              <span class="field-title">Choose the bird</span>
+              <select id="birdMatchSelect"></select>
+            </label>
+          </div>
+          <div class="bird-finder-results">
+            <div id="birdFinderResult" class="bird-finder-result">
+              Search a species to check recent county reports and seasonal history.
+            </div>
+            <div id="birdFinderNearby" class="bird-finder-nearby">
+              Recent nearby sightings will appear after you choose a bird.
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- TAB 4: RESOURCES & INFO -->
+      <div id="tab-resources" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-resources">
+        <section class="guide-section" aria-label="How to determine a bird fallout">
+          <div class="guide-intro">
+            <img class="guide-intro-birds" src="assets/Left%20birds%20illustration.png" alt="" aria-hidden="true" />
+            <div class="guide-intro-copy">
+              <p class="section-label">Field Method</p>
+              <h2>How To Determine A Bird Fallout</h2>
+              <p>
+                A fallout is most likely when heavy migration meets a weather stop sign, then fresh ground reports confirm birds are landing instead of passing over.
+              </p>
+            </div>
+            <img class="guide-intro-birds guide-intro-birds-right" src="assets/Right%20birds%20illustration.png" alt="" aria-hidden="true" />
+          </div>
+          <div class="guide-grid">
+            <article>
+              <span>1</span>
+              <h3>Monitor Radar For The Wall</h3>
+              <p>
+                Watch BirdCast or radar for dense northbound movement that stalls near rain, storms, or a front. High birds-in-flight with slower crossing totals can mean birds are dropping locally.
+              </p>
+            </article>
+            <article>
+              <span>2</span>
+              <h3>Identify Weather Stop Signs</h3>
+              <p>
+                Wind from the north or northeast, rain, storms, and cold-front passage can force migrants down. In many migration corridors, even light rain can turn a flyover night into a ground event.
+              </p>
+            </article>
+            <article>
+              <span>3</span>
+              <h3>Check Ground-Level Spikes</h3>
+              <p>
+                Use eBird to look for checklist surges, rare reports, or unusual numbers of migrants at local hotspots, parks, water sources, and river corridors.
+              </p>
+            </article>
+            <article>
+              <span>4</span>
+              <h3>Look For Field Cues</h3>
+              <p>
+                Tanagers, orioles, warblers, and vireos feeding at eye level, or several species crowding one tree or water source, are strong signs birds landed tired and hungry.
+              </p>
+            </article>
+          </div>
+          <div class="guide-cues">
+            <h3>Fast Visual Cues</h3>
+            <ul class="cue-list">
+              <li>Tanagers, orioles, or warblers feeding lower than usual.</li>
+              <li>Multiple migrant species sharing one oak, mulberry, or water source.</li>
+              <li>Sudden activity after dawn following rain, north wind, or a front.</li>
+              <li>Quiet sky but busy trees: a classic sign birds stopped instead of passing over.</li>
+              <li>Birds working puddles, wet edges, or creek lines more heavily than usual.</li>
+              <li>Mixed flocks moving slowly through sheltered understory instead of high canopy.</li>
+              <li>Repeated arrivals at fruiting trees or feeders over a short morning window.</li>
+            </ul>
+          </div>
+          <p class="timing-note">
+            Peak timing varies by region and season. For spring migration in much of Texas, late April into mid-May is a useful watch window for fallout conditions.
+          </p>
+        </section>
+
+        <div class="resources-grid">
+          <section class="feedback-panel">
+            <div class="panel-heading">
+              <p class="section-label">Feedback</p>
+            </div>
+            <form id="feedbackForm" class="feedback-form">
+              <label>
+                <span class="field-title">Name</span>
+                <input id="feedbackName" name="name" type="text" placeholder="Anonymous" />
+              </label>
+              <label>
+                <span class="field-title">Email</span>
+                <input id="feedbackEmail" name="email" type="email" placeholder="Optional" />
+              </label>
+              <label class="feedback-message-field">
+                <span class="field-title">Your suggestion</span>
+                <textarea id="feedbackMessage" name="message" rows="5" placeholder="How can this service be improved?" required></textarea>
+              </label>
+              <button id="feedbackSubmit" type="submit">Send feedback</button>
+              <p id="feedbackStatus" class="feedback-status" aria-live="polite"></p>
+            </form>
+          </section>
+
+          <section class="source-panel">
+            <div>
+              <p class="section-label">Next Data Connections</p>
+              <h2>Designed For Live Sources</h2>
+            </div>
+            <div class="source-grid">
+              <a id="ebirdRegionLink" href="https://ebird.org/explore" target="_blank" rel="noreferrer">eBird Region</a>
+              <a id="ebirdHotspotsLink" href="https://ebird.org/hotspots" target="_blank" rel="noreferrer">eBird Hotspots</a>
+              <a id="birdcastSourceLink" href="https://dashboard.birdcast.org/" target="_blank" rel="noreferrer">BirdCast Dashboard</a>
+              <a id="weatherSourceLink" href="https://www.google.com/search?q=weather+forecast" target="_blank" rel="noreferrer">Weather Forecast</a>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

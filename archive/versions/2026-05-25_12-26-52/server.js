@@ -1,0 +1,208 @@
+const http = require("http");
+const https = require("https");
+const fs = require("fs");
+const path = require("path");
+const { URL } = require("url");
+
+const root = __dirname;
+const port = Number(process.env.PORT || 4173);
+
+const contentTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+};
+
+function fetchText(url) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, { headers: { "User-Agent": "Mozilla/5.0" } }, (response) => {
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          resolve(fetchText(response.headers.location));
+          return;
+        }
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          body += chunk;
+        });
+        response.on("end", () => resolve(body));
+      })
+      .on("error", reject);
+  });
+}
+
+function textFromHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseCount(text, patterns) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return Number(match[1].replace(/,/g, ""));
+  }
+  return null;
+}
+
+function parseText(text, patterns) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1].trim();
+  }
+  return "";
+}
+
+async function handleBirdcast(requestUrl, response) {
+  const region = requestUrl.searchParams.get("region");
+  if (!/^US-[A-Z]{2}-\d{3}$/.test(region || "")) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Invalid BirdCast region" }));
+    return;
+  }
+
+  try {
+    const html = await fetchText(`https://dashboard.birdcast.org/region/${region}`);
+    const text = textFromHtml(html);
+    const birdsCrossed = parseCount(text, [
+      /([\d,.]+)\s+Birds have crossed/i,
+      /([\d,.]+)\s+Birds crossed .* last night/i,
+    ]);
+    const birdsInFlight = parseCount(text, [
+      /([\d,.]+)\s+Birds now in flight/i,
+      /([\d,.]+)\s+Birds in flight/i,
+    ]);
+    const startTime = parseText(text, [/Starting:\s*(.+)/i]);
+    const direction = parseText(text, [/Direction:\s*(.+)/i]);
+    const speed = parseText(text, [/Speed:\s*(.+)/i]);
+    const altitude = parseText(text, [/Altitude:\s*(.+)/i]);
+    const recorded = parseText(text, [/Recorded:\s*(.+)/i]);
+    const crossedLevel = parseText(text, [
+      /Birds have crossed[^.]*\(est\.\)\s*(Low|Medium|High)\b/i,
+      /Birds crossed[^.]*last night[^.]*\(est\.\)\s*(Low|Medium|High)\b/i,
+    ]);
+    const inFlightLevel = parseText(text, [
+      /Birds now in flight[^.]*\(est\.\)\s*(Low|Medium|High)\b/i,
+      /Birds in flight[^.]*\(est\.\)\s*(Low|Medium|High)\b/i,
+    ]);
+
+    if (!Number.isFinite(birdsCrossed) || !Number.isFinite(birdsInFlight)) {
+      throw new Error("BirdCast values not found");
+    }
+
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({
+      birdsCrossed,
+      birdsInFlight,
+      startTime,
+      direction,
+      speed,
+      altitude,
+      recorded,
+      crossedLevel,
+      inFlightLevel,
+    }));
+  } catch (error) {
+    response.writeHead(502, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleSpeciesStatus(requestUrl, response) {
+  const code = requestUrl.searchParams.get("code");
+  if (!/^[a-z0-9]+$/i.test(code || "")) {
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Invalid species code" }));
+    return;
+  }
+
+  try {
+    const pageUrls = [
+      `https://ebird.org/species/${encodeURIComponent(code)}`,
+      `https://r.jina.ai/http://ebird.org/species/${encodeURIComponent(code)}`,
+    ];
+    let match = null;
+    for (const url of pageUrls) {
+      try {
+        const pageText = await fetchText(url);
+        match = pageText.match(/\b(CR|EN|VU|NT|LC|DD|NE)\b(?:\s|[^a-z]){0,20}(Critically Endangered|Endangered|Vulnerable|Near Threatened|Least Concern|Data Deficient|Not Evaluated)\b/i)
+          || pageText.match(/\b(Critically Endangered|Endangered|Vulnerable|Near Threatened|Least Concern|Data Deficient|Not Evaluated)\b/i);
+        if (match) break;
+      } catch {
+        // Try the fallback source below.
+      }
+    }
+    if (!match) throw new Error("Species status unavailable");
+    let codeValue = "";
+    let label = "";
+    if (match?.length === 3) {
+      [, codeValue, label] = match;
+    } else if (match?.[1]) {
+      label = match[1];
+      const codes = {
+        "Critically Endangered": "CR",
+        Endangered: "EN",
+        Vulnerable: "VU",
+        "Near Threatened": "NT",
+        "Least Concern": "LC",
+        "Data Deficient": "DD",
+        "Not Evaluated": "NE",
+      };
+      codeValue = codes[label] || "";
+    }
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ code: codeValue, label }));
+  } catch (error) {
+    response.writeHead(502, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: error.message, code: "", label: "" }));
+  }
+}
+
+function serveStatic(requestUrl, response) {
+  const pathname = requestUrl.pathname === "/" ? "/index.html" : requestUrl.pathname;
+  const filePath = path.join(root, decodeURIComponent(pathname));
+  if (!filePath.startsWith(root)) {
+    response.writeHead(403);
+    response.end("Forbidden");
+    return;
+  }
+
+  fs.readFile(filePath, (error, data) => {
+    if (error) {
+      response.writeHead(404);
+      response.end("Not found");
+      return;
+    }
+    response.writeHead(200, {
+      "Content-Type": contentTypes[path.extname(filePath).toLowerCase()] || "application/octet-stream",
+    });
+    response.end(data);
+  });
+}
+
+http
+  .createServer(async (request, response) => {
+    const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+    if (requestUrl.pathname === "/api/birdcast") {
+      await handleBirdcast(requestUrl, response);
+      return;
+    }
+    if (requestUrl.pathname === "/api/species-status") {
+      await handleSpeciesStatus(requestUrl, response);
+      return;
+    }
+    serveStatic(requestUrl, response);
+  })
+  .listen(port, () => {
+    console.log(`Bird dashboard running at http://localhost:${port}`);
+  });

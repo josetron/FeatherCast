@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 420" role="img" aria-labelledby="title desc">
+  <title id="title">Birding fallout scene</title>
+  <desc id="desc">A stylized birder photographing birds under wind lines and a live migration sky.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6e8c5"/>
+      <stop offset="1" stop-color="#dcebd4"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7f9b69"/>
+      <stop offset="1" stop-color="#28543d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#1b3026" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="620" height="420" rx="28" fill="url(#sky)"/>
+  <circle cx="500" cy="82" r="44" fill="#d99b35" opacity=".7"/>
+  <g fill="none" stroke="#2c7188" stroke-width="5" stroke-linecap="round" opacity=".45">
+    <path d="M54 88c62-44 130-44 204 0s143 44 205 0"/>
+    <path d="M104 134c76-34 154-34 234 0s152 34 228 0"/>
+    <path d="M246 52c44-20 86-20 126 0s82 20 126 0"/>
+  </g>
+  <g fill="#17221d" opacity=".78">
+    <path d="M86 72c18-18 43-18 62 0-23-7-40-7-62 0z"/>
+    <path d="M155 123c14-14 34-14 48 0-18-5-30-5-48 0z"/>
+    <path d="M390 104c20-20 48-20 68 0-25-8-43-8-68 0z"/>
+    <path d="M466 164c15-15 36-15 52 0-20-6-33-6-52 0z"/>
+  </g>
+  <path d="M0 266c82-48 158-61 230-38 70 22 117 62 194 45 66-15 118-62 196-41v188H0z" fill="url(#hill)"/>
+  <path d="M0 330c88-18 162-10 222 24 55 31 110 30 166-2 96-54 175-56 232-8v76H0z" fill="#183628" opacity=".72"/>
+  <g filter="url(#shadow)">
+    <path d="M258 244c-18 18-27 47-20 78l-28 54h118l-30-55c7-28-4-60-22-77z" fill="#f5efe2"/>
+    <circle cx="268" cy="218" r="24" fill="#8f5b3f"/>
+    <path d="M240 212c8-27 42-34 62-12-18-2-40 1-62 12z" fill="#263f31"/>
+    <path d="M304 254l76-21 11 24-74 34z" fill="#263f31"/>
+    <rect x="365" y="210" width="62" height="44" rx="10" fill="#17221d"/>
+    <circle cx="392" cy="232" r="16" fill="#2c7188"/>
+    <circle cx="392" cy="232" r="8" fill="#dcebd4"/>
+    <path d="M234 278l-56 20 9 24 58-14z" fill="#8f5b3f"/>
+  </g>
+  <g>
+    <ellipse cx="120" cy="294" rx="52" ry="30" fill="#3f7657"/>
+    <path d="M92 289c22-24 58-25 84 0-30-9-56-9-84 0z" fill="#f0c949"/>
+    <circle cx="151" cy="279" r="4" fill="#17221d"/>
+    <path d="M165 284l28-8-21 19z" fill="#17221d"/>
+  </g>
+</svg>
