@@ -5629,6 +5629,21 @@ function renderRegion() {
     : "BirdCast Dashboard";
   document.querySelector("#weatherSourceLink").href = weatherUrl;
   document.querySelector("#weatherSourceLink").textContent = `Weather Forecast ${region.name}`;
+
+  const resolvedState = states.find((s) => s.name === region.state) || getSelectedState();
+  const stateAbbr = resolvedState ? resolvedState.abbr : "";
+  const regionSearchTerm = stateAbbr ? `${region.name}, ${stateAbbr}` : region.name;
+  const ebirdTrendsLink = document.querySelector("#ebirdTrendsLink");
+  if (ebirdTrendsLink) {
+    ebirdTrendsLink.href = `https://science.ebird.org/en/status-and-trends/species?search=${encodeURIComponent(regionSearchTerm)}`;
+    const trendsSpan = ebirdTrendsLink.querySelector("span");
+    if (trendsSpan) {
+      trendsSpan.textContent = `eBird Status & Trends: ${regionSearchTerm}`;
+    } else {
+      ebirdTrendsLink.textContent = `eBird Status & Trends: ${regionSearchTerm}`;
+    }
+  }
+
   document.querySelector("#speciesRegionTitle").textContent = `for ${fullName}`;
   document.querySelector("#hotspotHeadingMeta").textContent =
     `${fullName} · ${new Intl.DateTimeFormat("en-US", {

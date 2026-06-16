@@ -3030,6 +3030,36 @@ a:focus-visible {
   margin-top: 2px;
 }
 
+.ebird-trends-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--moss);
+  text-decoration: none;
+  padding: 4px 6px;
+  transition: all 0.2s ease;
+  margin-top: -2px;
+  width: fit-content;
+}
+
+.ebird-trends-link:hover {
+  color: var(--moss-dark);
+  text-decoration: underline;
+}
+
+.ebird-trends-link .link-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+}
+
+.ebird-trends-link:hover .link-icon {
+  transform: translate(2px, -2px);
+  opacity: 1;
+}
+
 /* Adjust mini map sizing when in header-visual */
 .header-visual .county-mini-map-link {
   display: grid;
@@ -3075,6 +3105,12 @@ a:focus-visible {
     flex: 1 1 200px; /* Responsive grid wrapping: side-by-side or stacked */
     width: auto;
     max-width: 100%;
+  }
+  .ebird-trends-link {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: -6px;
+    padding: 4px 0;
   }
 }
 
