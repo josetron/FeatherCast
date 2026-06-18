@@ -4503,7 +4503,7 @@ function displaySpeciesName(name) {
 function checklistOrLocationUrl(obs, fallbackUrl = "") {
   const checklistId = obs?.subId || obs?.checklistId || "";
   if (checklistId) return `https://ebird.org/checklist/${checklistId}`;
-  if (obs?.locId) return `https://ebird.org/hotspot/${obs.locId}`;
+  if (obs?.locId && !obs?.locationPrivate) return `https://ebird.org/hotspot/${obs.locId}`;
   return fallbackUrl;
 }
 
@@ -7009,8 +7009,11 @@ function speciesChipLink(name, art, suffix = "") {
 function recentObservationUrl(name) {
   const observation = latestObservationBySpecies.get(name);
   if (!observation) return "";
-  if (observation.locId) return `https://ebird.org/hotspot/${observation.locId}`;
   const checklistId = observation.subId || observation.checklistId || "";
+  if (observation.locationPrivate) {
+    return checklistId ? `https://ebird.org/checklist/${checklistId}` : "";
+  }
+  if (observation.locId) return `https://ebird.org/hotspot/${observation.locId}`;
   return checklistId ? `https://ebird.org/checklist/${checklistId}` : "";
 }
 
