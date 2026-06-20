@@ -2320,7 +2320,6 @@ let hotspotCityRequestId = 0;
 let activeRareRegionCode = "";
 let activeRareObservations = [];
 let activeBirdcastMeta = null;
-let isBirdcastAvailable = false;
 let activeWeatherContext = null;
 const hotspotSpeciesCountCache = new Map();
 const birdsCrossedHint = document.querySelector("#birdsCrossedHint");
@@ -2563,7 +2562,7 @@ function setAutoFillHint(element, service, isAvailable = true) {
 }
 
 function syncBirdcastDisplaysFromInputs() {
-  if (!isBirdcastAvailable && !isMigrationSeason()) {
+  if (!isMigrationSeason()) {
     const legend = "No Migration Tracked outside these windows Spring: March 1 – June 15,<br>Fall: August 1 – November 15";
     if (birdsCrossedDisplay) {
       birdsCrossedDisplay.innerHTML = legend;
@@ -2592,7 +2591,7 @@ function resetBirdcastData(message = "BirdCast data loading for the selected reg
   fields.birdsCrossed.value = 0;
   fields.birdsInFlight.value = 0;
 
-  if (!isBirdcastAvailable && !isMigrationSeason()) {
+  if (!isMigrationSeason()) {
     if (birdsCrossedHint) {
       birdsCrossedHint.classList.remove("birdcast-unavailable");
       birdsCrossedHint.textContent = "";
@@ -3847,7 +3846,7 @@ function parseBirdcastText(text, patterns) {
 }
 
 async function refreshBirdcastCountyData() {
-  if (!isBirdcastAvailable && !isMigrationSeason()) {
+  if (!isMigrationSeason()) {
     if (birdsCrossedHint) {
       birdsCrossedHint.classList.remove("birdcast-unavailable");
       birdsCrossedHint.textContent = "";
@@ -4002,48 +4001,26 @@ async function refreshBirdcastCountyData() {
     fields.birdsCrossed.value = 0;
     fields.birdsInFlight.value = 0;
     activeBirdcastMeta = null;
-    setBirdcastManualMode(false);
+    setBirdcastManualMode(true);
     syncBirdcastLevelBadge("", birdsCrossedLevel);
     syncBirdcastLevelBadge("", birdsInFlightLevel);
-    if (!isMigrationSeason()) {
-      const legend = "No Migration Tracked outside these windows Spring: March 1 – June 15,<br>Fall: August 1 – November 15";
-      if (birdsCrossedDisplay) {
-        birdsCrossedDisplay.innerHTML = legend;
-        birdsCrossedDisplay.classList.add("no-migration-legend");
-      }
-      if (birdsInFlightDisplay) {
-        birdsInFlightDisplay.innerHTML = legend;
-        birdsInFlightDisplay.classList.add("no-migration-legend");
-      }
-      if (birdsCrossedCaption) birdsCrossedCaption.textContent = "";
-      if (birdsInFlightCaption) birdsInFlightCaption.textContent = "";
-      if (birdsCrossedHint) {
-        birdsCrossedHint.classList.remove("birdcast-unavailable");
-        birdsCrossedHint.textContent = "";
-      }
-      if (birdsInFlightHint) {
-        birdsInFlightHint.classList.remove("birdcast-unavailable");
-        birdsInFlightHint.textContent = "";
-      }
-    } else {
-      if (birdsCrossedDisplay) birdsCrossedDisplay.textContent = formatBirds(Number(fields.birdsCrossed.value || 0));
-      if (birdsInFlightDisplay) birdsInFlightDisplay.textContent = formatBirds(Number(fields.birdsInFlight.value || 0));
-      if (birdsCrossedCaption) {
-        birdsCrossedCaption.textContent = "BirdCast auto-fill is unavailable right now. Wait a few minutes and try again.";
-      }
-      if (birdsInFlightCaption) {
-        birdsInFlightCaption.textContent = "BirdCast auto-fill is unavailable right now. Wait a few minutes and try again.";
-      }
-      if (birdsCrossedHint) {
-        birdsCrossedHint.classList.add("birdcast-unavailable");
-        birdsCrossedHint.textContent = "Service is not Available: BirdCast";
-      }
-      if (birdsInFlightHint) {
-        birdsInFlightHint.classList.add("birdcast-unavailable");
-        birdsInFlightHint.textContent = "Service is not Available: BirdCast";
-      }
-    }
+    if (birdsCrossedDisplay) birdsCrossedDisplay.textContent = formatBirds(Number(fields.birdsCrossed.value || 0));
+    if (birdsInFlightDisplay) birdsInFlightDisplay.textContent = formatBirds(Number(fields.birdsInFlight.value || 0));
     syncBirdcastValueTone(Number(fields.birdsCrossed.value || 0), birdsCrossedDisplay);
+    if (birdsCrossedCaption) {
+      birdsCrossedCaption.textContent = "BirdCast auto-fill is unavailable right now. Wait a few minutes and try again, or enter manually.";
+    }
+    if (birdsInFlightCaption) {
+      birdsInFlightCaption.textContent = "BirdCast auto-fill is unavailable right now. Wait a few minutes and try again, or enter manually.";
+    }
+    if (birdsCrossedHint) {
+      birdsCrossedHint.classList.add("birdcast-unavailable");
+      birdsCrossedHint.textContent = "Service is not Available: BirdCast";
+    }
+    if (birdsInFlightHint) {
+      birdsInFlightHint.classList.add("birdcast-unavailable");
+      birdsInFlightHint.textContent = "Service is not Available: BirdCast";
+    }
     updateDashboard();
   }
 }
@@ -6858,13 +6835,13 @@ async function refreshSelectedCountyData() {
   clearHotspotSearch();
   const region = getRegion();
   const regionName = region.state ? `${region.name}, ${region.state}` : region.name;
-  await loadLatestBirdcastMap();
   resetBirdcastData();
   resetNonMigrantSignals(regionName);
   refreshScoredPanels();
   await refreshHotspotsForSelectedRegion();
   await refreshEbirdReports();
   await refreshBirdcastCountyData();
+  await loadLatestBirdcastMap();
   if (birdSearchInput?.value.trim()) await updateBirdFinderMatches();
 }
 
@@ -7370,79 +7347,62 @@ async function loadLatestBirdcastMap() {
   const heading = radarPanel?.querySelector("h2");
   const link = radarPanel?.querySelector("a");
 
+  if (!isMigrationSeason()) {
+    const region = getRegion();
+    const stateCode = region && region.state ? region.state.toLowerCase() : "";
+    let mapUrl = "https://droughtmonitor.unl.edu/data/png/current/current_usdm.png";
+    let mapName = "US Drought Monitor Map";
+
+    if (stateCode === "tx" || stateCode === "az" || stateCode === "fl") {
+      mapUrl = `https://droughtmonitor.unl.edu/data/png/current/current_${stateCode}_trd.png`;
+      mapName = `${region.state} Drought Monitor Map`;
+    }
+
+    if (sectionLabel) sectionLabel.textContent = "Drought Context";
+    if (heading) heading.textContent = "Drought Map";
+    if (link) {
+      link.textContent = "Open USDM";
+      link.href = "https://droughtmonitor.unl.edu/";
+    }
+
+    birdcastMapImage.style.display = "";
+    birdcastMapImage.src = mapUrl;
+    birdcastMapImage.alt = `Current drought monitor map for ${region.state || "United States"}`;
+    
+    birdcastMapStatus.innerHTML = `Showing latest ${mapName}.`;
+    birdcastMapStatus.classList.remove("no-migration-legend");
+    return;
+  }
+
+  if (sectionLabel) sectionLabel.textContent = "Radar Context";
+  if (heading) heading.textContent = "BirdCast Map";
+  if (link) {
+    link.textContent = "Open map";
+    link.href = "https://birdcast.org/migration-tools/live-migration-maps/";
+  }
+
+  birdcastMapImage.style.display = "";
+  birdcastMapStatus.classList.remove("no-migration-legend");
+
   const now = new Date();
   now.setUTCMinutes(Math.floor(now.getUTCMinutes() / 10) * 10, 0, 0);
-
-  let loadedUrl = null;
-  let candidateDate = null;
 
   for (let minutesBack = 0; minutesBack <= 48 * 60; minutesBack += 10) {
     const candidate = new Date(now.getTime() - minutesBack * 60 * 1000);
     const url = birdcastMosaicUrl(candidate);
 
     try {
-      loadedUrl = await loadImage(url);
-      candidateDate = candidate;
-      break;
+      const loadedUrl = await loadImage(url);
+      birdcastMapImage.src = loadedUrl;
+      birdcastMapImage.alt = "Most recent BirdCast live migration map";
+      birdcastMapStatus.textContent = `Loaded BirdCast frame ${candidate.toISOString().slice(0, 16).replace("T", " ")} UTC.`;
+      return;
     } catch {
       // Try the next earlier 10-minute frame.
     }
   }
 
-  if (loadedUrl) {
-    isBirdcastAvailable = true;
-
-    if (sectionLabel) sectionLabel.textContent = "Radar Context";
-    if (heading) heading.textContent = "BirdCast Map";
-    if (link) {
-      link.textContent = "Open map";
-      link.href = "https://birdcast.org/migration-tools/live-migration-maps/";
-    }
-
-    birdcastMapImage.style.display = "";
-    birdcastMapImage.src = loadedUrl;
-    birdcastMapImage.alt = "Most recent BirdCast live migration map";
-    birdcastMapStatus.textContent = `Loaded BirdCast frame ${candidateDate.toISOString().slice(0, 16).replace("T", " ")} UTC.`;
-    birdcastMapStatus.classList.remove("no-migration-legend");
-  } else {
-    isBirdcastAvailable = false;
-
-    if (!isMigrationSeason()) {
-      const region = getRegion();
-      const stateCode = region && region.state ? region.state.toLowerCase() : "";
-      let mapUrl = "https://droughtmonitor.unl.edu/data/png/current/current_usdm.png";
-      let mapName = "US Drought Monitor Map";
-
-      if (stateCode === "tx" || stateCode === "az" || stateCode === "fl") {
-        mapUrl = `https://droughtmonitor.unl.edu/data/png/current/current_${stateCode}_trd.png`;
-        mapName = `${region.state} Drought Monitor Map`;
-      }
-
-      if (sectionLabel) sectionLabel.textContent = "Drought Context";
-      if (heading) heading.textContent = "Drought Map";
-      if (link) {
-        link.textContent = "Open USDM";
-        link.href = "https://droughtmonitor.unl.edu/";
-      }
-
-      birdcastMapImage.style.display = "";
-      birdcastMapImage.src = mapUrl;
-      birdcastMapImage.alt = `Current drought monitor map for ${region.state || "United States"}`;
-      
-      birdcastMapStatus.innerHTML = `Showing latest ${mapName}.`;
-      birdcastMapStatus.classList.remove("no-migration-legend");
-    } else {
-      if (sectionLabel) sectionLabel.textContent = "Radar Context";
-      if (heading) heading.textContent = "BirdCast Map";
-      if (link) {
-        link.textContent = "Open map";
-        link.href = "https://birdcast.org/migration-tools/live-migration-maps/";
-      }
-      birdcastMapImage.style.display = "";
-      birdcastMapStatus.textContent = "No recent BirdCast map image loaded. Open the full map with the link above.";
-      birdcastMapStatus.classList.remove("no-migration-legend");
-    }
-  }
+  birdcastMapStatus.textContent = "No recent BirdCast map image loaded. Open the full map with the link above.";
 }
 
 async function submitFeedback(event) {
